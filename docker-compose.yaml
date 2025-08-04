@@ -1,0 +1,31 @@
+name: webapp-aws-infra
+
+services:
+  # MongoDB for local development
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      #- mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro  
+    environment:
+      MONGO_DATABASE: mongodb
+      # MONGO_INITDB_ROOT_USERNAME: admin
+      # ONGO_INITDB_ROOT_PASSWORD: password
+        # - MONGO_INITDB_DATABASE=mongodb
+        # - MONGO_INITDB_ROOT_USERNAME=admin
+        # - ONGO_INITDB_ROOT_PASSWORD=password
+#     networks:
+#       - app-network
+
+# networks:
+#   app-network:
+#     name: my-network
+#     driver: bridge
+
+volumes:
+  mongodb_data:
+    name: mongodb_data

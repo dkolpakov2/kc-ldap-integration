@@ -105,7 +105,24 @@ newman run keycloak-ldap-login.postman_collection.json \
 >>!!!     This does not create the user in the LDAP directory itself — only in Keycloak unless sync mode = IMPORT.
 -  Login using LDAP Credentials (same in step 1. )
 -  Decode JWT Token (Optional)
-- 
+    Use Postman Tests tab with:
+    >>JS:
+    const jwt = pm.response.json().access_token;
+    const payload = JSON.parse(atob(jwt.split('.')[1]));
+    console.log("Token Payload:", payload);
+    pm.environment.set("user_id", payload.sub);
+-    Call a Protected API
+    GET /my-protected-api
+    Authorization: Bearer {{user_token}}
+- Automate with Newman (CLI)
+>>bash:
+    newman run keycloak-ldap-chain.postman_collection.json \
+  --env-var "realm=demo" \
+  --env-var "keycloak_url=http://localhost:8080" \
+  --env-var "ldap_user=test123" \
+  --env-var "ldap_password=Test123@" \
+  --env-var "client_id=my-client"
+
 
 
 

@@ -2,7 +2,7 @@
 
 # --- CONFIGURATION ---
 KC_HOST="http://localhost:8080"             # local test Or DEV AKS Keycloak endpoint
-REALM="test-realm"
+REALM="master"
 CLIENT_ID="test-client"
 USERNAME="ldap-user"
 PASSWORD="ldap-password"
@@ -42,7 +42,7 @@ else
 fi
 
 # --- 3. Simulate Login ---
-echo "🔐 Attempting login as LDAP user: $USERNAME"
+echo "Attempting login as LDAP user: $USERNAME"
 
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$KC_HOST/realms/$REALM/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \

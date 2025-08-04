@@ -16,6 +16,27 @@ git push -u origin master
 Simulate LDAP Login via Script
 ==========================================================
 
+0.  docker-compose -f docker-compose-ldap.yaml up --build
+Access URLs
+Service	     | URL	                    |Default Credentials
+-----------------------------------------------------------------------
+Keycloak	    http://localhost:8080	    admin / admin
+phpLDAPadmin	https://localhost:6443	cn=admin,dc=example,dc=org / admin
+------------------------------------------------------------------------
+Keycloak LDAP Federation Setup
+  In Keycloak Admin UI:
+    Go to User Federation → Add provider → ldap
+    Use:
+      Vendor: Other
+      Connection URL: ldap://openldap:389
+      Users DN: dc=example,dc=org
+      Bind DN: cn=admin,dc=example,dc=org
+      Bind Credential: admin
+      Click "Test Connection", then "Test Authentication"
+      Save and hit "Synchronize all users"
+
+
+
 1. Simulate Script simulate-ldap-login-with-sync.sh Does 4 steps ( comments included)
     - Logs into Keycloak as an admin
     - Calls the LDAP user sync API
@@ -82,7 +103,7 @@ To simulate load, use Newman:
 
 newman run keycloak-ldap-login.postman_collection.json \
   --env-var "keycloak_url=http://localhost:8080" \
-  --env-var "realm_name=demo" \
+  --env-var "realm_name=master" \
   --env-var "ldap_user=ldapuser1" \
   --env-var "ldap_password=Password123!"    
 -----------
@@ -122,12 +143,19 @@ newman run keycloak-ldap-login.postman_collection.json \
   --env-var "ldap_user=test123" \
   --env-var "ldap_password=Test123@" \
   --env-var "client_id=my-client"
+--------------------------------------------------------------
+6. Optional: Use a Mock LDAP Server
+For local testing without a real LDAP:
+>>bash:
+  docker run --name mock-ldap -p 389:389 -e SLAPD_DOMAIN="example.org" -e SLAPD_PASSWORD="admin" osixia/o
+
+keycloak Error when trying to connect to LDAP: 'SocketReset'
 
 
 
-
-
-
+User:
+  dmitry: 3b7f0b48-5b08-4ab8-b34f-2e866a7325df
+  pass: admin
 -------------------------------------------------------------
 XXX. postman_collection.json file for download?
      Newman-based shell script for 100 users?

@@ -149,6 +149,7 @@ For local testing without a real LDAP:
 >>bash:
   docker run --name mock-ldap -p 389:389 -e SLAPD_DOMAIN="example.org" -e SLAPD_PASSWORD="admin" osixia/o
 
+## ERROR
 keycloak Error when trying to connect to LDAP: 'SocketReset'
 
 

@@ -31,4 +31,87 @@ Simulate LDAP Login via Script
 2. Docker container to simulate this
 3. Kubernetes Job/CronJob YAML to run it inside AKS
 -------------------------------------------------------
+Postman load test:
+1. create POST request:
+    >> bash:
+    POST {{keycloak_url}}/realms/{{realm_name}}/protocol/openid-connect/token
+2. Body (x-www-form-urlencoded):
+    client_id=account
+    grant_type=password
+    username={{ldap_user}}
+    password={{ldap_password}}
 
+3. Postman Collection Example (JSON Export)
+{
+  "info": {
+    "name": "Keycloak LDAP Login Test",
+    "_postman_id": "uuid-here",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [{
+    "name": "LDAP Login",
+    "request": {
+      "method": "POST",
+      "header": [{
+        "key": "Content-Type",
+        "value": "application/x-www-form-urlencoded"
+      }],
+      "body": {
+        "mode": "urlencoded",
+        "urlencoded": [
+          { "key": "client_id", "value": "account", "type": "text" },
+          { "key": "grant_type", "value": "password", "type": "text" },
+          { "key": "username", "value": "{{ldap_user}}", "type": "text" },
+          { "key": "password", "value": "{{ldap_password}}", "type": "text" }
+        ]
+      },
+      "url": {
+        "raw": "{{keycloak_url}}/realms/{{realm_name}}/protocol/openid-connect/token",
+        "host": ["{{keycloak_url}}"],
+        "path": ["realms", "{{realm_name}}", "protocol", "openid-connect", "token"]
+      }
+    },
+    "response": []
+  }]
+}
+
+4. Load Testing with Postman + Newman
+To simulate load, use Newman:
+>>bash
+    npm install -g newman
+
+newman run keycloak-ldap-login.postman_collection.json \
+  --env-var "keycloak_url=http://localhost:8080" \
+  --env-var "realm_name=demo" \
+  --env-var "ldap_user=ldapuser1" \
+  --env-var "ldap_password=Password123!"    
+-----------
+5. Create LDAP User via Keycloak Admin API
+    POST /admin/realms/{{realm}}/users
+    Authorization: Bearer {{admin_token}}
+    Content-Type: application/json
+    BODY:
+    {
+        "username": "{{ldap_user}}",
+        "enabled": true,
+        "emailVerified": true,
+        "email": "{{ldap_user}}@test.com",
+        "credentials": [{
+            "type": "password",
+            "value": "{{ldap_password}}",
+            "temporary": false
+        }]
+    }
+>>!!!     This does not create the user in the LDAP directory itself — only in Keycloak unless sync mode = IMPORT.
+-  Login using LDAP Credentials (same in step 1. )
+-  Decode JWT Token (Optional)
+- 
+
+
+
+
+
+-------------------------------------------------------------
+XXX. postman_collection.json file for download?
+     Newman-based shell script for 100 users?
+     Docker-based LDAP + Keycloak simulator for full testing?

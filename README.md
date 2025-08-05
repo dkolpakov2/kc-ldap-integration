@@ -197,6 +197,9 @@ XXX.
  Postman Collection to test this setup
  Add Infinispan or YugabyteDB
  Helm chart version for AKS
+ Kubernetes initContainer
+ entrypoint.sh to prevent Keycloak booting if LDAP isn’t reachable
+ 
 
     -  postman_collection.json file for download?
     - Newman-based shell script for 100 users?

@@ -32,4 +32,18 @@ public class LdapBindCheck {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, "ldaps://${LDAP_HOST}:${LDAP_PORT}");
-        env.put(Context.SECURITY_AUTHENTICATION, "sim_
+        env.put(Context.SECURITY_AUTHENTICATION, "simple");
+        env.put(Context.SECURITY_PRINCIPAL, "${LDAP_USER_DN}");
+        env.put(Context.SECURITY_CREDENTIALS, "${LDAP_PASSWORD}");
+        env.put("java.naming.ldap.factory.socket", "javax.net.ssl.SSLSocketFactory");
+
+        try {
+            new InitialDirContext(env);
+            System.out.println(" LDAP bind successful");
+        } catch (Exception e) {
+            System.err.println(" LDAP bind failed: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+}
+EOF

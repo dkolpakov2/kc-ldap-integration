@@ -67,8 +67,13 @@ services:
       KC_DB_PASSWORD: keycloak
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTPS_KEY_STORE_FILE: conf/my-keystore.jks
+      KC_HTTPS_KEY_STORE_PASSWORD: changeit
+      KC_HTTPS_KEY_STORE_TYPE: JKS
+      KC_HTTPS_PORT: 8443      
     ports:
       - "8080:8080"
+      - "8443:8443"    # HTTPS
     depends_on:
       - keycloak-db
       - openldap

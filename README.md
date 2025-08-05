@@ -152,6 +152,10 @@ For local testing without a real LDAP:
 ## ERROR
 keycloak Error when trying to connect to LDAP: 'SocketReset'
 
+## Create a Sample JKS File
+keytool -genkeypair -alias keycloak -keyalg RSA -keysize 2048 \
+  -keystore my-keystore.jks -storepass changeit \
+  -validity 365 -dname "CN=localhost,OU=IT,O=Example,L=City,S=State,C=US"
 
 
 User:

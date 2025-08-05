@@ -177,6 +177,12 @@ keytool -importcert -trustcacerts -keystore ldap-truststore.jks \
 ## Test LDAP Connection:
 >>bash:
 openssl s_client -connect ldap:636
+## Troubleshooting steps
+# Check if the file exists in the container
+docker exec -it <keycloak-container> ls -l /etc/x509/https/
+
+# Test permissions
+docker exec -it <keycloak-container> ls -ld /etc/x509 /etc/x509/https
 
 
 -----------------------------------------

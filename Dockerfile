@@ -9,6 +9,7 @@ FROM quay.io/keycloak/keycloak:24.0
 USER root
 # Copy keystore
 COPY my-keystore.jks /opt/keycloak/conf/
+COPY ldap-truststore.jks /opt/keycloak/conf/
 # Restore user if needed
 USER 1000
 
@@ -20,7 +21,6 @@ ARG env
 COPY newrelic/$env/newrelic.yml /opt/jboss/newrelic/newrelic.yml
 COPY config-keycloak/standalone.xml /opt/jboss/keycloak/standalone/configuration/standalone.xml
 COPY config-keycloak/standalone-ha.xml /opt/jboss/keycloak/standalone/configuration/standalone-ha.xml
-
 
 ENV keycloak.profile.feature.upload_scripts enabled
 

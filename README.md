@@ -152,16 +152,39 @@ For local testing without a real LDAP:
 ## ERROR
 keycloak Error when trying to connect to LDAP: 'SocketReset'
 
-## Create a Sample JKS File
+## Create a Sample JKS File for Keycloak to enable SSL/https:8443
 keytool -genkeypair -alias keycloak -keyalg RSA -keysize 2048 \
   -keystore my-keystore.jks -storepass changeit \
   -validity 365 -dname "CN=localhost,OU=IT,O=Example,L=City,S=State,C=US"
+##  Generate Java Keystore (JKS) Truststore for LDAP
+If using self-signed certs for the LDAP simulator (e.g., rroemhild/test-openldap), we need to extract its cert and trust it.
+## use script:
+# Export LDAP cert from running container (after starting docker-compose once)
+docker cp ldap:/etc/ssl/certs/ca.crt ldap-ca.crt
+
+# Import cert into JKS truststore
+keytool -importcert -trustcacerts -keystore ldap-truststore.jks \
+  -storepass changeit -noprompt \
+  -alias testldap -file ldap-ca.crt
+-----------------------------------------  
+ Folder Structure:
+.
+├── Dockerfile
+├── docker-compose.yml
+├── my-keystore.jks            # HTTPS server cert for Keycloak
+├── ldap-truststore.jks        # Truststore to trust LDAP over SSL
 
 
+
+-----------------------------------------
 User:
   dmitry: 3b7f0b48-5b08-4ab8-b34f-2e866a7325df
   pass: admin
 -------------------------------------------------------------
-XXX. postman_collection.json file for download?
-     Newman-based shell script for 100 users?
-     Docker-based LDAP + Keycloak simulator for full testing?
+XXX. 
+    - Add automatic Let's Encrypt certs?
+    - Enable Kubernetes/AKS secret-based keystore loading?
+
+    -  postman_collection.json file for download?
+    - Newman-based shell script for 100 users?
+    - Docker-based LDAP + Keycloak simulator for full testing?

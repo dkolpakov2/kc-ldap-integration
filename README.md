@@ -171,9 +171,12 @@ keytool -importcert -trustcacerts -keystore ldap-truststore.jks \
 .
 ├── Dockerfile
 ├── docker-compose.yml
-├── my-keystore.jks            # HTTPS server cert for Keycloak
+├── kc-keystore.jks            # HTTPS server cert for Keycloak
 ├── ldap-truststore.jks        # Truststore to trust LDAP over SSL
 
+## Test LDAP Connection:
+>>bash:
+openssl s_client -connect ldap:636
 
 
 -----------------------------------------
@@ -184,6 +187,10 @@ User:
 XXX. 
     - Add automatic Let's Encrypt certs?
     - Enable Kubernetes/AKS secret-based keystore loading?
+
+ Postman Collection to test this setup
+ Add Infinispan or YugabyteDB
+ Helm chart version for AKS
 
     -  postman_collection.json file for download?
     - Newman-based shell script for 100 users?

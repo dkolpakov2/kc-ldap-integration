@@ -7,9 +7,16 @@ FROM accountid.dkr.ecr.us-east-1.amazonaws.com/accountid-qa-ecr:iac-svc
 FROM quay.io/keycloak/keycloak:24.0
 # Optional: change user back to root to copy files
 USER root
+# Install openssl and other useful tools
+RUN microdnf update -y && \
+    microdnf install -y openssl nss-tools ca-certificates && \
+    mkdir -p /etc/x509/https/ && \
+    microdnf clean all
+
+# (Optional) create cert directory for mounting later
 # Copy keystore
-COPY my-keystore.jks /opt/keycloak/conf/
-COPY ldap-truststore.jks /opt/keycloak/conf/
+COPY my-keystore.jks /etc/x509/https/
+COPY jks/ /etc/x509/https/
 # Restore user if needed
 USER 1000
 

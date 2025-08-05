@@ -56,9 +56,11 @@ services:
   #     - kcnet
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    #image: quay.io/keycloak/keycloak:24.0
     # if using dockerfile then build:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.keycloak  # Your custom Dockerfile
     container_name: keycloak
     command:
       - start-dev
@@ -80,7 +82,9 @@ services:
         -Djavax.net.ssl.trustStoreType=JKS          
     ports:
       - "8080:8080"
-      - "8443:8443"    # HTTPS
+      - "8443:8443"
+    volumes:
+      - ./certs:/etc/x509/https/      
     depends_on:
       - keycloak-db
       - openldap
@@ -92,6 +96,8 @@ services:
     ports:
       - 8081:8080
 volumes:
+  certs:
+    driver: local
   pgdata:
     driver: local
   pgconf:

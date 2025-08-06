@@ -62,8 +62,20 @@ services:
       context: .
       dockerfile: Dockerfile.keycloak  # Your custom Dockerfile
     container_name: keycloak
-    command: ["start-dev", "--import-realm"]
-      #- start-dev
+    command: ["start-dev", "--import-realm"]  ## "--import-realm" if json realm was imported
+       #- start-dev
+    volumes:
+      - ./configure-ldap.sh:/opt/keycloak/configure-ldap.sh
+      - ./ldap-config.json:/opt/keycloak/ldap-config.json
+    command: >
+      bash -c "
+        /opt/keycloak/bin/kc.sh start-dev &
+        echo 'Waiting for Keycloak to start...';
+        until curl -s http://localhost:8080/realms/master; do sleep 5; done;
+        echo 'Keycloak started. Configuring LDAP...';
+        bash /opt/keycloak/configure-ldap.sh;
+        wait
+      "       
     healthcheck:
       test: ["CMD", "/opt/keycloak/tools/healthcheck.sh"]
       interval: 30s

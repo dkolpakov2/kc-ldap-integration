@@ -16,6 +16,11 @@ USER root
 # Install OpenSSL without microdnf
 RUN yum install -y openssl nss-tools ca-certificates && yum clean all
 
+# Install openssl using dnf (workaround if microdnf is not available)
+RUN curl -o /etc/yum.repos.d/ubi.repo https://raw.githubusercontent.com/minimization/content-resolver-input/main/repos/ubi8.repo && \
+    dnf install -y openssl nss-tools ca-certificates && \
+    dnf clean all
+    
 # Create HTTPS cert folder and copy keystores
 RUN mkdir -p /etc/x509/https/
 COPY my-keystore.jks /etc/x509/https/

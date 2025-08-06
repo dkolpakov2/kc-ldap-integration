@@ -1,0 +1,18 @@
+#!/bin/env bash
+set -e
+
+# Start Keycloak in background
+/opt/keycloak/bin/kc.sh start-dev &
+
+# Wait until Keycloak is ready
+until curl -s http://localhost:8080/health/ready | grep "UP" > /dev/null; do
+  echo "Waiting for Keycloak..."
+  sleep 5
+done
+
+sleep 10
+echo "Keycloak is up. Running LDAP configuration..."
+/opt/keycloak/apply-ldap-provider.sh
+
+# Keep container running
+wait

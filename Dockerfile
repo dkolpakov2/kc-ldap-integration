@@ -55,7 +55,8 @@ RUN useradd -u 1000 keycloak && \
 
 USER admin
 COPY config/ /opt/keycloak/
-RUN chmod +x /opt/keycloak/
+COPY config/entrypoint-configure /opt/keycloak/entrypoint-configure
+RUN chmod +x /opt/keycloak/configure-ldap.sh /opt/keycloak/entrypoint-configure
 
 # Copy JKS files into the image (optional)
 COPY my-keystore.jks /etc/x509/https/my-keystore.jks

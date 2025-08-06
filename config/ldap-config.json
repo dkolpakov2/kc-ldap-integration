@@ -1,0 +1,28 @@
+{
+  "realm": "demo",
+  "enabled": true,
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": {
+      "ldap": {
+        "name": "ad-ldap",
+        "providerId": "ldap",
+        "providerType": "org.keycloak.storage.UserStorageProvider",
+        "config": {
+          "connectionUrl": ["ldap://ad.example.com:389"],
+          "usersDn": ["CN=Users,DC=example,DC=com"],
+          "bindDn": ["CN=Administrator,CN=Users,DC=example,DC=com"],
+          "bindCredential": ["YourAdminPassword"],
+          "authType": ["simple"],
+          "vendor": ["active directory"],
+          "searchScope": ["1"],
+          "userObjectClasses": ["user"],
+          "usernameLDAPAttribute": ["sAMAccountName"],
+          "rdnLDAPAttribute": ["cn"],
+          "uuidLDAPAttribute": ["objectGUID"],
+          "userAccountControlsAfterPasswordUpdate": ["false"],
+          "editMode": ["READ_ONLY"]
+        }
+      }
+    }
+  }
+}

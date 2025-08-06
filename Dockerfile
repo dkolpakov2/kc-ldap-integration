@@ -6,7 +6,30 @@ LABEL maintainer="you@example.com"
 ENV KEYCLOAK_VERSION=24.0.3 \
     KC_HOME=/opt/keycloak \
     JAVA_HOME=/usr/lib/jvm/java-17 \
-    LANG=en_US.UTF-8
+    LANG=en_US.UTF-8 \
+    #!/bin/bash
+    # Set Keycloak admin credentials and host info
+    KEYCLOAK_URL="http://localhost:8080" \
+    KEYCLOAK_REALM="master" \
+    KEYCLOAK_USER="admin" \
+    KEYCLOAK_PASS="admin" \
+    LDAP_CONFIG_FILE="ldap-config.json" \
+    KCADM="./bin/kcadm.sh"
+    # Path to your JSON config (must be in importable format)
+    
+
+    # Path to kcadm.sh - adjust if needed
+    
+
+    # Login to Keycloak
+$KCADM config credentials --server "$KEYCLOAK_URL" \
+  --realm "$KEYCLOAK_REALM" \
+  --user "$KEYCLOAK_USER" \
+  --password "$KEYCLOAK_PASS"
+
+    # Import the LDAP component JSON into the master realm
+$KCADM create components -r "$KEYCLOAK_REALM" -f "$LDAP_CONFIG_FILE"
+
 
 # Install system dependencies
 RUN yum install -y \
@@ -31,8 +54,9 @@ RUN useradd -u 1000 keycloak && \
     chown -R keycloak:keycloak ${KC_HOME}
 
 USER admin
-COPY config/configure-ldap.sh /opt/keycloak/configure-ldap.sh
-RUN chmod +x /opt/keycloak/configure-ldap.sh
+COPY config/ /opt/keycloak/
+RUN chmod +x /opt/keycloak/
+
 # Copy JKS files into the image (optional)
 COPY my-keystore.jks /etc/x509/https/my-keystore.jks
 COPY ldap-truststore.jks /etc/x509/https/ldap-truststore.jks

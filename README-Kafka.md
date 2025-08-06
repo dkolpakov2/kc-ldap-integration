@@ -279,7 +279,8 @@ USER keycloak
 COPY configure-ldap.sh /opt/keycloak/configure-ldap.sh
 RUN chmod +x /opt/keycloak/configure-ldap.sh
 
-2. Update configure-ldap.s
+2. Update configure-ldap.json
+## JSON: parentId can be left out if -r master is used.
 -------------------------------------
 ## Method: Use Docker Compose + Realm Import (Best for Dev/Test)
 ## Step 1: Create a Realm JSON with LDAP Config

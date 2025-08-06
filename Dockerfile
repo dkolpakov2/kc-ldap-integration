@@ -83,5 +83,6 @@ ENV PATH="${KC_HOME}/bin:${PATH}" \
 USER 1000
 
 # Start Keycloak
-ENTRYPOINT ["kc.sh"]
-CMD ["start-dev"]
+#ENTRYPOINT ["kc.sh"]
+#CMD ["start-dev"]
+ENTRYPOINT ["/opt/keycloak/configure-ldap.sh"]

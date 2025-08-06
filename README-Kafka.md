@@ -262,7 +262,7 @@ public class App {
     }
 }
 -----------------------------------------------------------------
-✅ Output :    You'll get a file like schemas.json with contents:
+## Output :  get a file like schemas.json with contents:
 
         {
             "topic": "user.events",
@@ -273,3 +273,62 @@ public class App {
             "samples": [ ... ]
         }
 ================================================================
+## Method  Method 1: Use kcadm.sh in a Custom Dockerfile
+1. Add to dockerfile
+USER keycloak
+COPY configure-ldap.sh /opt/keycloak/configure-ldap.sh
+RUN chmod +x /opt/keycloak/configure-ldap.sh
+
+2. Update configure-ldap.s
+-------------------------------------
+## Method: Use Docker Compose + Realm Import (Best for Dev/Test)
+## Step 1: Create a Realm JSON with LDAP Config
+Export it from a running Keycloak or define it manually:
+{
+  "realm": "demo",
+  "enabled": true,
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": {
+      "ldap": {
+        "name": "ldap",
+        "providerId": "ldap",
+        "providerType": "org.keycloak.storage.UserStorageProvider",
+        "config": {
+          "connectionUrl": ["ldap://ldap:389"],
+          "usersDn": ["ou=users,dc=example,dc=org"],
+          "bindDn": ["cn=admin,dc=example,dc=org"],
+          "bindCredential": ["admin"],
+          "authType": ["simple"],
+          "vendor": ["other"],
+          "searchScope": ["1"]
+        }
+      }
+    }
+  }
+}
+
+## 2 Step 2: docker-compose.yaml
+version: '3.8'
+
+services:
+  ldap:
+    image: osixia/openldap:1.5.0
+    environment:
+      LDAP_ORGANISATION: "Example Org"
+      LDAP_DOMAIN: "example.org"
+      LDAP_ADMIN_PASSWORD: admin
+    ports:
+      - "389:389"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./realm-demo.json:/opt/keycloak/data/import/realm-demo.json
+    depends_on:
+      - ldap
+    ports:
+      - "8080:8080"

@@ -174,6 +174,9 @@ keytool -importcert -trustcacerts -keystore ldap-truststore.jks \
 ├── kc-keystore.jks            # HTTPS server cert for Keycloak
 ├── ldap-truststore.jks        # Truststore to trust LDAP over SSL
 
+docker build -t Rubtsovsk1234!SachSachkeycloak-with-yum .
+docker run -p 8443:8443 keycloak-with-yum
+
 ## Test LDAP Connection:
 >>bash:
 openssl s_client -connect ldap:636
@@ -187,6 +190,9 @@ docker exec -it <keycloak-container> ls -l /etc/x509/https/
 
 # Test permissions
 docker exec -it <keycloak-container> ls -ld /etc/x509 /etc/x509/https
+docker exec -it keycloak_container /bin/b
+# Validate Keystore.JKS
+
 -----------------------------------------
 ├── Dockerfile
 ├── docker-compose.yml
@@ -207,7 +213,8 @@ COPY ldap-truststore.jks /etc/x509/https/
 COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh
 RUN chmod +x /opt/keycloak/tools/healthcheck.sh
 
-
+# Check keystore
+keytool -list -v -keystore keystore.jks -alias myalias
 
 -----------------------------------------
 User:

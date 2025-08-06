@@ -30,6 +30,9 @@ RUN curl -L https://github.com/keycloak/keycloak/releases/download/${KEYCLOAK_VE
 RUN useradd -u 1000 keycloak && \
     chown -R keycloak:keycloak ${KC_HOME}
 
+USER admin
+COPY config/configure-ldap.sh /opt/keycloak/configure-ldap.sh
+RUN chmod +x /opt/keycloak/configure-ldap.sh
 # Copy JKS files into the image (optional)
 COPY my-keystore.jks /etc/x509/https/my-keystore.jks
 COPY ldap-truststore.jks /etc/x509/https/ldap-truststore.jks

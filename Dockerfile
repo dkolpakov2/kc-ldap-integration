@@ -1,4 +1,4 @@
-FROM accountid.dkr.ecr.us-east-1.amazonaws.com/accountid-qa-ecr:iac-svc
+#FROM accountid.dkr.ecr.us-east-1.amazonaws.com/accountid-qa-ecr:iac-svc
 # ex:docker build --no-cache -f Dockerfile -t jboss/keycloak:latest .
 # ex:docker tag 123 aws_account_id.dkr.ecr.region.amazonaws.com/keycloak
 # ex:docker push aws_account_id.dkr.ecr.region.amazonaws.com/keycloak
@@ -8,10 +8,28 @@ FROM quay.io/keycloak/keycloak:24.0
 # Optional: change user back to root to copy files
 USER root
 # Install openssl and other useful tools
-RUN microdnf update -y && \
-    microdnf install -y openssl nss-tools ca-certificates && \
-    mkdir -p /etc/x509/https/ && \
-    microdnf clean all
+# RUN microdnf update -y && \
+#     microdnf install -y openssl nss-tools ca-certificates && \
+#     mkdir -p /etc/x509/https/ && \
+#     microdnf clean all
+
+# Install OpenSSL without microdnf
+RUN yum install -y openssl nss-tools ca-certificates && yum clean all
+
+# Create HTTPS cert folder and copy keystores
+RUN mkdir -p /etc/x509/https/
+COPY my-keystore.jks /etc/x509/https/
+COPY ldap-truststore.jks /etc/x509/https/
+
+# Optional: copy healthcheck
+COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh
+RUN chmod +x /opt/keycloak/tools/healthcheck.sh
+
+
+#RUN apk add --no-cache openssl
+
+# Add Keycloak manually or switch base image
+# COPY keycloak /opt/keycloak/
 
 # (Optional) create cert directory for mounting later
 # Copy keystore

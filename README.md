@@ -177,12 +177,24 @@ keytool -importcert -trustcacerts -keystore ldap-truststore.jks \
 ## Test LDAP Connection:
 >>bash:
 openssl s_client -connect ldap:636
+
+## verify in container:
+docker exec -it keycloak openssl version
+
 ## Troubleshooting steps
 # Check if the file exists in the container
 docker exec -it <keycloak-container> ls -l /etc/x509/https/
 
 # Test permissions
 docker exec -it <keycloak-container> ls -ld /etc/x509 /etc/x509/https
+-----------------------------------------
+├── Dockerfile
+├── docker-compose.yml
+├── my-keystore.jks             # HTTPS keystore
+├── ldap-truststore.jks         # LDAP truststore
+└── healthcheck.sh              # Optional: validate LDAP on boot
+
+
 
 
 -----------------------------------------
@@ -199,7 +211,7 @@ XXX.
  Helm chart version for AKS
  Kubernetes initContainer
  entrypoint.sh to prevent Keycloak booting if LDAP isn’t reachable
- 
+
 
     -  postman_collection.json file for download?
     - Newman-based shell script for 100 users?

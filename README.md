@@ -194,6 +194,18 @@ docker exec -it <keycloak-container> ls -ld /etc/x509 /etc/x509/https
 ├── ldap-truststore.jks         # LDAP truststore
 └── healthcheck.sh              # Optional: validate LDAP on boot
 
+-----------------------------------------
+# Install OpenSSL without microdnf
+RUN yum install -y openssl nss-tools ca-certificates && yum clean all
+
+# Create HTTPS cert folder and copy keystores
+RUN mkdir -p /etc/x509/https/
+COPY my-keystore.jks /etc/x509/https/
+COPY ldap-truststore.jks /etc/x509/https/
+
+# Optional: copy healthcheck
+COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh
+RUN chmod +x /opt/keycloak/tools/healthcheck.sh
 
 
 

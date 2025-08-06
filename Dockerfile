@@ -1,65 +1,60 @@
-#FROM accountid.dkr.ecr.us-east-1.amazonaws.com/accountid-qa-ecr:iac-svc
-# ex:docker build --no-cache -f Dockerfile -t jboss/keycloak:latest .
-# ex:docker tag 123 aws_account_id.dkr.ecr.region.amazonaws.com/keycloak
-# ex:docker push aws_account_id.dkr.ecr.region.amazonaws.com/keycloak
-# docker build -f Dockerfile -t accountid-ecr:iac-svc .
-# aws --profile newdev ecr get-login-password --region us-east-1 --no-verify-ssl | docker login --username AWS --password-stdin accountid.dkr.ecr.us-east-1.amazonaws.com
-FROM quay.io/keycloak/keycloak:24.0
-# Optional: change user back to root to copy files
-USER root
-# Install openssl and other useful tools
-# RUN microdnf update -y && \
-#     microdnf install -y openssl nss-tools ca-certificates && \
-#     mkdir -p /etc/x509/https/ && \
-#     microdnf clean all
+FROM registry.access.redhat.com/ubi8/ubi:latest
 
-# Install OpenSSL without microdnf
-RUN yum install -y openssl nss-tools ca-certificates && yum clean all
+LABEL maintainer="you@example.com"
 
-# Install openssl using dnf (workaround if microdnf is not available)
-RUN curl -o /etc/yum.repos.d/ubi.repo https://raw.githubusercontent.com/minimization/content-resolver-input/main/repos/ubi8.repo && \
-    dnf install -y openssl nss-tools ca-certificates && \
-    dnf clean all
-    
-# Create HTTPS cert folder and copy keystores
-RUN mkdir -p /etc/x509/https/
-COPY my-keystore.jks /etc/x509/https/
-COPY ldap-truststore.jks /etc/x509/https/
+# Set environment variables
+ENV KEYCLOAK_VERSION=24.0.3 \
+    KC_HOME=/opt/keycloak \
+    JAVA_HOME=/usr/lib/jvm/java-17 \
+    LANG=en_US.UTF-8
 
-# Optional: copy healthcheck
-COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh
-RUN chmod +x /opt/keycloak/tools/healthcheck.sh
+# Install system dependencies
+RUN yum install -y \
+      unzip \
+      openssl \
+      nss-tools \
+      java-17-openjdk \
+      curl \
+      ca-certificates \
+      shadow-utils \
+    && yum clean all
 
+# Download and extract Keycloak manually
+RUN curl -L https://github.com/keycloak/keycloak/releases/download/${KEYCLOAK_VERSION}/keycloak-${KEYCLOAK_VERSION}.tar.gz -o /tmp/keycloak.tar.gz && \
+    mkdir -p /opt && \
+    tar -xzf /tmp/keycloak.tar.gz -C /opt && \
+    mv /opt/keycloak-${KEYCLOAK_VERSION} ${KC_HOME} && \
+    rm /tmp/keycloak.tar.gz
 
-#RUN apk add --no-cache openssl
+# Optional: create non-root user and change permissions
+RUN useradd -u 1000 keycloak && \
+    chown -R keycloak:keycloak ${KC_HOME}
 
-# Add Keycloak manually or switch base image
-# COPY keycloak /opt/keycloak/
+# Copy JKS files into the image (optional)
+COPY my-keystore.jks /etc/x509/https/my-keystore.jks
+COPY ldap-truststore.jks /etc/x509/https/ldap-truststore.jks
 
-# (Optional) create cert directory for mounting later
-# Copy keystore
-COPY my-keystore.jks /etc/x509/https/
-COPY jks/ /etc/x509/https/
-# Restore user if needed
+# Create HTTPS cert directory if needed
+RUN mkdir -p /etc/x509/https/ && \
+    chmod 755 /etc/x509/https/
+
+# Set Keycloak to run in development mode for now
+ENV PATH="${KC_HOME}/bin:${PATH}" \
+    KC_DB=dev-file \
+    KC_HTTPS_KEY_STORE_FILE=/etc/x509/https/my-keystore.jks \
+    KC_HTTPS_KEY_STORE_PASSWORD=changeit \
+    KC_HTTPS_KEY_STORE_TYPE=JKS \
+    JAVA_OPTS_APPEND="-Djavax.net.ssl.trustStore=/etc/x509/https/ldap-truststore.jks \
+                      -Djavax.net.ssl.trustStorePassword=changeit \
+                      -Djavax.net.ssl.trustStoreType=JKS"
+
+#  Add a healthcheck script
+# COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh
+# RUN chmod +x /opt/keycloak/tools/healthcheck.sh
+
+# Switch to keycloak user
 USER 1000
 
-RUN mkdir -m777 /opt/jboss/newrelic
-RUN rm /opt/jboss/keycloak/standalone/deployments/keycloak-javascripts.jar
-# COPY script/keycloak-javascripts.jar /opt/jboss/keycloak/standalone/deployments/
-#COPY script/docker-entrypoint.sh /opt/jboss/keycloak/docker-entrypoint.sh
-ARG env
-COPY newrelic/$env/newrelic.yml /opt/jboss/newrelic/newrelic.yml
-COPY config-keycloak/standalone.xml /opt/jboss/keycloak/standalone/configuration/standalone.xml
-COPY config-keycloak/standalone-ha.xml /opt/jboss/keycloak/standalone/configuration/standalone-ha.xml
-
-ENV keycloak.profile.feature.upload_scripts enabled
-
-# -Djavax.net.debug=all
-ENV  JAVA_OPTS -Dkeycloak.profile.feature.upload_scripts=enabled -javaagent:/opt/jboss/newrelic/newrelic.jar -Dnewrelic.environment=$env \
-        ${JAVA_OPTS}
-ENV DB_VENDOR postgres
-
-
-EXPOSE 8080
-EXPOSE 8443
-EXPOSE 5432
+# Start Keycloak
+ENTRYPOINT ["kc.sh"]
+CMD ["start-dev"]

@@ -193,6 +193,95 @@ docker exec -it <keycloak-container> ls -ld /etc/x509 /etc/x509/https
 docker exec -it keycloak_container /bin/b
 # Validate Keystore.JKS
 
+# List Runing Dockers
+docker ps -q --filter "name=^/keycloak$"
+
+>>>>>============================================
+Deploy manually after KC is up:
+  docker compose up -d keycloak
+# Wait until keycloak is up, then run the script inside the container
+  docker exec -it <keycloak-container-name> bash /opt/keycloak/configure-ldap.sh
+78  
+# -u 0 runs the command as root user. Once you're in:
+docker exec -u 0 -it <container_name_or_id> /bin/sh
+su - keycloak   //  back to KC user
+docker exec -u 0 <container_name> touch /root/test.txt
+docker exec -u keycloak <container_name> ls -la
+docker exec <container_name> whoami
+
+
+<<<<<<<<<<<>>>>>>>>>>>
+call docker 
+docker run --name keycloak \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  -p 8080:8080 \
+  quay.io/keycloak/keycloak:24.0.1 \
+  start-dev
+==========================================
+>> Dockerfile:
+    FROM quay.io/keycloak/keycloak:24.0.1
+
+    # Set workdir for scripts
+    WORKDIR /opt/keycloak
+
+    # Copy your custom entrypoint script
+    COPY entrypoint.sh /opt/keycloak/entrypoint.sh
+    RUN chmod +x /opt/keycloak/entrypoint.sh
+
+    # Pre-build the Keycloak distribution (required for running commands in custom images)
+    RUN /opt/keycloak/bin/kc.sh build
+
+    # Use your custom entrypoint
+    ENTRYPOINT ["/opt/keycloak/entrypoint.sh"]
+------------------------------------------
+>> entrypoint.sh
+----------------
+  FROM quay.io/keycloak/keycloak:24.0.1
+  # Set workdir for scripts
+  WORKDIR /opt/keycloak
+  # Copy your custom entrypoint script
+  COPY entrypoint.sh /opt/keycloak/entrypoint.sh
+  RUN chmod +x /opt/keycloak/entrypoint.sh
+  # Pre-build the Keycloak distribution (required for running commands in custom images)
+  RUN /opt/keycloak/bin/kc.sh build
+  # Use your custom entrypoint
+  ENTRYPOINT ["/opt/keycloak/entrypoint.sh"]
+-----------------------------------------
+# Start Keycloak  >>>>>>>>>>>>>>>>>>>>>>>>
+#!/usr/bin/env sh
+
+echo "Starting Keycloak..."
+
+# Example: Import LDAP configuration JSON if exists
+if [ -f "/opt/keycloak/configure-ldap.json" ]; then
+  echo "Importing LDAP config..."
+  /opt/keycloak/bin/kc.sh import --dir=/opt/keycloak/configure-ldap.json || echo "LDAP import failed or skipped"
+fi
+
+# Start Keycloak
+exec /opt/keycloak/bin/kc.sh start-dev
+
+----------------------------------------
+run-in-keycloak.sh (example script)
+>>sh
+#!/bin/sh
+# Define the container name
+CONTAINER_NAME="keycloak"
+# Get the running container ID (partial name match)
+CONTAINER_ID=$(docker ps -qf "name=$CONTAINER_NAME")
+
+# Check if container was found
+if [ -z "$CONTAINER_ID" ]; then
+  echo "Container with name '$CONTAINER_NAME' not found or not running."
+  exit 1
+fi
+
+echo "Found container: $CONTAINER_ID"
+
+# Example: Run a command inside the container
+docker exec "$CONTAINER_ID" ls /opt/keycloak
+
 -----------------------------------------
 ├── Dockerfile
 ├── docker-compose.yml
@@ -207,7 +296,7 @@ RUN yum install -y openssl nss-tools ca-certificates && yum clean all
 # Create HTTPS cert folder and copy keystores
 RUN mkdir -p /etc/x509/https/
 COPY my-keystore.jks /etc/x509/https/
-COPY ldap-truststore.jks /etc/x509/https/
+COPY truststore.jks /etc/x509/https/
 
 # Optional: copy healthcheck
 COPY healthcheck.sh /opt/keycloak/tools/healthcheck.sh

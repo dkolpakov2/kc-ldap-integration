@@ -64,12 +64,13 @@ services:
     container_name: keycloak
     command: ["start-dev", "--import-realm"]  ## "--import-realm" if json realm was imported
        #- start-dev
+    command: >
+      bash -c "/opt/keycloak/bin/kc.sh start-dev & sleep 10 && curl http://localhost:8080 && echo LDAP configure..."       
     volumes:
       - ./configure-ldap.sh:/opt/keycloak/configure-ldap.sh
       - ./ldap-config.json:/opt/keycloak/ldap-config.json
     command: >
-      sh -c '
-        /opt/keycloak/binc.sh start-dev &
+      sh -c '        /opt/keycloak/binc.sh start-dev &
         echo "Waiting for Keycloak to start...";
         until curl -s http://localhost:8080/realms/master; do sleep 5; done;
         echo "Keycloak started. Configuring LDAP...";

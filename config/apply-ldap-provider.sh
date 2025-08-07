@@ -27,11 +27,17 @@ docker exec "$CONTAINER_ID" sh ./opt/keycloak/bin/kcadm.sh
 # Path to kcadm.sh - adjust if needed
 KCADM="./opt/keycloak/kcadm.sh"
 
+$KCADM config truststore --truststore truststore.jks \
+#  specify options like: #(if using JKS)
+--truststore-password  \ 
+--truststore-type JKS
+--no-config 
+
 # Login to Keycloak
 $KCADM config credentials --server "$KEYCLOAK_URL" \
   --realm "$KEYCLOAK_REALM" \
   --user "$KEYCLOAK_USER" \
-  --password "$KEYCLOAK_PASS"
+  --password "$KEYCLOAK_PASS" \
 
 # Import the LDAP component JSON into the master realm
 $KCADM create components -r "$KEYCLOAK_REALM" -f "$LDAP_CONFIG_FILE"

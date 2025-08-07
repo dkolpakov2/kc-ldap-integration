@@ -53,7 +53,7 @@ RUN curl -L https://github.com/keycloak/keycloak/releases/download/${KEYCLOAK_VE
 RUN useradd -u 1000 keycloak && \
     chown -R keycloak:keycloak ${KC_HOME}
 
-USER admin
+USER admi#n
 COPY config/ /opt/keycloak/
 COPY config/entrypoint-configure /opt/keycloak/entrypoint-configure
 RUN chmod +x /opt/keycloak/configure-ldap.sh /opt/keycloak/entrypoint-configure

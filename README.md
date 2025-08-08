@@ -282,6 +282,12 @@ echo "Found container: $CONTAINER_ID"
 # Example: Run a command inside the container
 docker exec "$CONTAINER_ID" ls /opt/keycloak
 
+## Then run the command via docker exec:
+>>bash
+docker exec -it keycloak \
+  /opt/keycloak/bin/kcadm.sh config truststore \
+  --truststore /opt/keycloak/certs/ldap-cert.pem \
+  --truststore-type PEM
 -----------------------------------------
 ├── Dockerfile
 ├── docker-compose.yml

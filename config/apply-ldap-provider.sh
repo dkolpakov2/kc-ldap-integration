@@ -32,7 +32,10 @@ $KCADM config truststore --truststore truststore.jks \
 --truststore-password  \ 
 --truststore-type JKS
 --no-config 
-
+## example:
+/opt/keycloak/bin/kcadm.sh config truststore \
+  --truststore /opt/keycloak/certs/ldap-cert.pem \
+  --truststore-type PEM
 # Login to Keycloak
 $KCADM config credentials --server "$KEYCLOAK_URL" \
   --realm "$KEYCLOAK_REALM" \

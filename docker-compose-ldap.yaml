@@ -111,7 +111,8 @@ services:
       - "8080:8080"
       - "8443:8443"
     volumes:
-      - ./certs:/etc/x509/https/      
+      - ./certs:/etc/x509/https/    
+      - ./ldap-cert.pem:/opt/keycloak/certs/ldap-cert.pem        
     depends_on:
       - keycloak-db
       - openldap

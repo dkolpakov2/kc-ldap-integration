@@ -364,3 +364,27 @@ LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r $REALM --query '
 cat <<EOF | /opt/keycloak/bin/kcadm.sh create components -r $REALM -s name=ldap-group-mapper -s providerId=group-ldap-mapper -s providerType=org.keycloak.storage.ldap.mappers.LDAPStorageMapper -s parentId=$LDAP_PROVIDER_ID -s config.'ldap.groups.dn'=["ou=Groups,dc=example,dc=com"] -s config.'group.name.ldap.attribute'=["cn"] -s config.'group.object.classes'=["groupOfNames"] -s config.'membership.ldap.attribute'=["member"] -s config.'membership.attribute.type'=["DN"] -s config.'mode'=["READ_ONLY"] -s config.'groups.path'=["/"]
 {}
 EOF
+
+--------------
+Group LDAP Mapper:
+--------------
+{
+  "name": "groups",
+  "providerId": "group-ldap-mapper",
+  "parentId": "LDAP_PROVIDER_ID",
+  "config": {
+    "groups.dn": ["ou=groups,dc=example,dc=com"],
+    "group.name.ldap.attribute": ["cn"],
+    "group.object.classes": ["groupOfNames"],
+    "preserve.group.inheritance": ["true"],
+    "ignore.missing.groups": ["false"],
+    "mapped.group.attributes": [""],
+    "membership.ldap.attribute": ["member"],
+    "membership.attribute.type": ["DN"],
+    "membership.user.ldap.attribute": ["uid"],
+    "ldap.filter": [""],
+    "mode": ["READ_ONLY"],
+    "groups.path": ["/"],
+    "drop.non.existing.groups.during.sync": ["false"]
+  }
+}

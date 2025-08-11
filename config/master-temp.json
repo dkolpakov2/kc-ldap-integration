@@ -1,0 +1,54 @@
+{
+  "realm": "myrealm",
+  "enabled": true,
+  "users": [],
+  "groups": [],
+  "components": [
+    {
+      "name": "ldap",
+      "providerId": "ldap",
+      "providerType": "org.keycloak.storage.UserStorageProvider",
+      "config": {
+        "priority": ["0"],
+        "enabled": ["true"],
+        "fullSyncPeriod": ["-1"],
+        "changedSyncPeriod": ["-1"],
+        "cachePolicy": ["DEFAULT"],
+        "importEnabled": ["true"],
+        "editMode": ["READ_ONLY"],
+        "syncRegistrations": ["false"],
+        "vendor": ["other"],
+        "usernameLDAPAttribute": ["uid"],
+        "rdnLDAPAttribute": ["uid"],
+        "uuidLDAPAttribute": ["entryUUID"],
+        "userObjectClasses": ["inetOrgPerson, organizationalPerson"],
+        "connectionUrl": ["ldap://LDAP_HOST:LDAP_PORT"],
+        "usersDn": ["ou=users,LDAP_BASE_DN"],
+        "authType": ["simple"],
+        "bindDn": ["LDAP_BIND_DN"],
+        "bindCredential": ["LDAP_BIND_CREDENTIALS"],
+        "searchScope": ["1"],
+        "useTruststoreSpi": ["ldapsOnly"]
+      }
+    },
+    {
+      "name": "group-ldap-mapper",
+      "providerId": "group-ldap-mapper",
+      "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
+      "parentId": "ldap", 
+      "config": {
+        "mode": ["READ_ONLY"],
+        "membershipAttributeType": ["DN"],
+        "membershipLDAPAttribute": ["member"],
+        "membershipUserLDAPAttribute": ["uid"],
+        "groupsDn": ["ou=groups,LDAP_BASE_DN"],
+        "groupNameLDAPAttribute": ["cn"],
+        "groupObjectClasses": ["groupOfNames"],
+        "preserveGroupInheritance": ["false"],
+        "ignoreMissingGroups": ["false"],
+        "mappedGroupAttributes": [""],
+        "dropNonExistingGroupsDuringSync": ["false"]
+      }
+    }
+  ]
+}

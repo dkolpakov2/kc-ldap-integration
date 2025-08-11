@@ -1,0 +1,11 @@
+FROM quay.io/keycloak/keycloak:24.0.4
+
+USER root
+RUN microdnf install -y jq && microdnf clean all
+USER keycloak
+
+COPY sync-ldap-groups.sh /opt/keycloak/sync-ldap-groups.sh
+RUN chmod +x /opt/keycloak/sync-ldap-groups.sh
+
+# Start Keycloak and then run sync
+ENTRYPOINT ["/bin/bash", "-c", "/opt/keycloak/bin/kc.sh start-dev & /opt/keycloak/sync-ldap-groups.sh && wait"]

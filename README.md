@@ -310,6 +310,10 @@ RUN chmod +x /opt/keycloak/tools/healthcheck.sh
 
 # Check keystore
 keytool -list -v -keystore keystore.jks -alias myalias
+#docker compose up -d keycloak
+
+# Wait until keycloak is up, then run the script inside the container
+docker exec -it <keycloak-container-name> bash /opt/keycloak/configure-ldap.sh
 
 -----------------------------------------
 User:
@@ -330,3 +334,33 @@ XXX.
     -  postman_collection.json file for download?
     - Newman-based shell script for 100 users?
     - Docker-based LDAP + Keycloak simulator for full testing?
+
+## 2nd method= import realm
+
+===================================================================
+## 3 Import Groups:
+ >> Pre-requisites
+  - Keycloak already has an LDAP User Federation provider set up and working.
+  - LDAP contains group objects, e.g. cn=admins,ou=Groups,dc=example,dc=com
+  - Your LDAP user objects have membership attributes like memberOf or group entries contain member attributes.
+  - Add Group Mapper in Keycloak Admin Console
+    Go to:
+      - User Federation → <Your LDAP provider name> → Mappers → Create
+      - Fill in the mapper details:
+      - Name: LDAP Group Mapper
+      - Mapper Type: group-ldap-mapper
+
+LDAP Groups DN:
+Path to groups in LDAP. Example:
+
+----------------------------
+API/CLI Automation
+If you want this mapping to be created via script (Docker/Kubernetes friendly), you can use kcadm.sh:
+
+>>bash
+REALM=myrealm
+LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r $REALM --query 'providerId=ldap' --fields id --format csv | tail -n1)
+
+cat <<EOF | /opt/keycloak/bin/kcadm.sh create components -r $REALM -s name=ldap-group-mapper -s providerId=group-ldap-mapper -s providerType=org.keycloak.storage.ldap.mappers.LDAPStorageMapper -s parentId=$LDAP_PROVIDER_ID -s config.'ldap.groups.dn'=["ou=Groups,dc=example,dc=com"] -s config.'group.name.ldap.attribute'=["cn"] -s config.'group.object.classes'=["groupOfNames"] -s config.'membership.ldap.attribute'=["member"] -s config.'membership.attribute.type'=["DN"] -s config.'mode'=["READ_ONLY"] -s config.'groups.path'=["/"]
+{}
+EOF

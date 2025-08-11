@@ -1,6 +1,5 @@
 export KC_URL="http://localhost:8080"
-export KC_USER="admin"
-export KC_PASS="admin"
+export KC_USER="admin"export KC_PASS="admin"
 export KC_CLIENT="admin-cli"
 export REALM="master"
 

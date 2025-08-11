@@ -30,7 +30,7 @@ KCADM="./opt/keycloak/kcadm.sh"
 $KCADM config truststore --truststore truststore.jks \
 #  specify options like: #(if using JKS)
 --truststore-password  \ 
---truststore-type JKS
+--truststore-type JKS     ##( (PKCS12, JKS, or PEM))
 --no-config 
 ## example:
 /opt/keycloak/bin/kcadm.sh config truststore \

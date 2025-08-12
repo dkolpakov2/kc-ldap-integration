@@ -1,4 +1,9 @@
 LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv | tail -n +2)
+# how to remove double quotas from file by using ded command
+LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv \
+    | grep -v '^id' \
+    | grep ldap \
+    | cut -d',' -f1 )
 
 /opt/keycloak/bin/kcadm.sh create components -r master \
   -s name="ad-group-mapper" \

@@ -23,3 +23,5 @@ docker exec -it keycloak \
   -user sa \
   -password password \
   -sql "DELETE FROM USER_ENTITY"
+
+  sed -n '/,realmOne *$/s/,.*//p' realms.csv

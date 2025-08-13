@@ -24,4 +24,16 @@ docker exec -it keycloak \
   -password password \
   -sql "DELETE FROM USER_ENTITY"
 
+
+#  you have id, names list in file and  want only the realmOne id using sed, you can do:
   sed -n '/,realmOne *$/s/,.*//p' realms.csv
+  
+#  If your CSV has quotes like "123","realmOne", you can strip the quotes first:
+sed -n '2,3s/"\([^"]*\)".*/\1/p' file.csv
+
+#and you want only the realmOne id using sed, you can do:
+# keep just name in var
+VAR="1111-aaaa-bbbb-cccc,realmOne"
+VAR=$(echo "$VAR" | sed 's/^[^,]*,//')
+echo "$VAR"
+

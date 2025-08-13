@@ -5,19 +5,28 @@ LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query '
     | grep ldap \
     | cut -d',' -f1 )
 
-/opt/keycloak/bin/kcadm.sh create components -r master \
-  -s name="ad-group-mapper" \
-  -s providerId=group-ldap-mapper \
-  -s providerType=org.keycloak.storage.ldap.mappers.LDAPStorageMapper \
-  -s parentId=$LDAP_PROVIDER_ID \
-  -s 'config.groups.dn=["OU=Groups,DC=example,DC=com"]' \
-  -s 'config.group.name.ldap.attribute=["cn"]' \
-  -s 'config.group.object.classes=["group"]' \
-  -s 'config.preserve.group.inheritance=["true"]' \
-  -s 'config.ignore.missing.groups=["false"]' \
-  -s 'config.members.ldap.attribute=["member"]' \
-  -s 'config.ldap.filter=["(objectClass=group)"]' \
-  -s 'config.mode=["READ_ONLY"]'
+# JSON integration with ldap-groups.json
+LDAP_PROVIDER_ID=$(./kcadm.sh get components -r master \
+    --query 'name=ldap' --fields id --format csv | tail -n +2 | cut -d, -f1)
+
+sed -i "s/PUT_YOUR_LDAP_PROVIDER_ID_HERE/$LDAP_PROVIDER_ID/" ldap-group-config.json
+
+./kcadm.sh create components -r master -f ldap-group-config.json
+
+# CSV integration TODO: fix  it
+# /opt/keycloak/bin/kcadm.sh create components -r master \
+#   -s name="ad-group-mapper" \
+#   -s providerId=group-ldap-mapper \
+#   -s providerType=org.keycloak.storage.ldap.mappers.LDAPStorageMapper \
+#   -s parentId=$LDAP_PROVIDER_ID \
+#   -s 'config.groups.dn=["OU=Groups,DC=example,DC=com"]' \
+#   -s 'config.group.name.ldap.attribute=["cn"]' \
+#   -s 'config.group.object.classes=["group"]' \
+#   -s 'config.preserve.group.inheritance=["true"]' \
+#   -s 'config.ignore.missing.groups=["false"]' \
+#   -s 'config.members.ldap.attribute=["member"]' \
+#   -s 'config.ldap.filter=["(objectClass=group)"]' \
+#   -s 'config.mode=["READ_ONLY"]'
 
 
 # trigger LDAP full sync

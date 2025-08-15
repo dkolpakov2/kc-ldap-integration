@@ -388,3 +388,39 @@ Group LDAP Mapper:
     "drop.non.existing.groups.during.sync": ["false"]
   }
 }
+
+#### Login to the correct realm with admin privileges
+If you have an admin user in my-realm-dev:
+
+bash
+Copy
+Edit
+./kcadm.sh config credentials \
+  --server http://localhost:8080 \
+  --realm my-realm-dev \
+  --user my-admin-user \
+  --password 'my-password'
+This user must have the realm-admin role inside the realm-management client of my-realm-dev.
+You can assign it in the Admin Console:
+my-realm-dev → Clients → realm-management → Roles → realm-admin → Assign to your admin user.
+
+=====================================================
+Option 2: Pass as script argument
+
+#!/bin/bash
+MODE="$1"
+
+if [ "$MODE" = "prod" ]; then
+    echo "Production mode"
+elif [ "$MODE" = "dev" ]; then
+    echo "Development mode"
+else
+    echo "Usage: $0 [prod|dev]"
+    exit 1
+fi
+-------------------------
+Run:
+
+./myscript.sh prod
+./myscript.sh dev
+======================================================

@@ -424,3 +424,88 @@ Run:
 ./myscript.sh prod
 ./myscript.sh dev
 ======================================================
+
+
+3️⃣ Clean Up Duplicate Users Before Sync
+
+If you want LDAP to import fresh, remove conflicting accounts:
+
+./kcadm.sh get users -r master --query email=duplicate@example.com --fields id,username,email --format csv \
+  | tail -n +2 \
+  | while read id; do
+      ./kcadm.sh delete users/$id -r master
+    done
+### wipe all users (except admin) before sync:
+
+./kcadm.sh get users -r master --fields id,username --format csv \
+  | grep -v admin \
+  | tail -n +2 \
+  | while read id; do
+      ./kcadm.sh delete users/$id -r master
+    done    
+
+###
+LDAP_PROVIDER_ID=$(./kcadm.sh get components -r master \
+    --query 'name=ldap' --fields id --format csv | tail -n +2 | cut -d, -f1)
+
+sed -i "s/PUT_YOUR_LDAP_PROVIDER_ID_HERE/$LDAP_PROVIDER_ID/" ldap-group-config.json
+
+./kcadm.sh create components -r master -f ldap-group-config.jsonadmin     
+
+## Group mapping :
+# 1. Get your LDAP provider ID
+LDAP_PROVIDER_ID=$(./kcadm.sh get components -r my-realm \
+  --query 'providerId=ldap' \
+  --fields id \
+  --format csv | tail -n +2)
+
+## 2. Get the LDAP Group Mapper ID
+# Each LDAP provider has a group-ldap-mapper. List them and save to var:
+
+GROUP_MAPPER_ID=$(./kcadm.sh get components -r my-realm \
+  --query "providerId=group-ldap-mapper&parentId=$LDAP_PROVIDER_ID" \
+  --fields id \
+  --format csv | tail -n +2 | cut -d, -f1)
+
+## 3 Trigger group sync from LDAP
+# To pull groups and their members from LDAP into Keycloak:
+# This will: 
+   - Import all LDAP groups (according to the mapper configuration).
+   - Import group memberships (i.e., users automatically assigned to those groups).
+./kcadm.sh create user-storage/$LDAP_PROVIDER_ID/sync -r my-realm \
+  -s action=triggerFullSync
+
+# For incremental sync instead or Updates Only:
+./kcadm.sh create user-storage/$LDAP_PROVIDER_ID/sync -r my-realm \
+  -s action=triggerChangedUsersSync
+
+ldap-group-member.json template:
+{
+  "name": "ldap-group-mapper",
+  "providerId": "group-ldap-mapper",
+  "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
+  "parentId": "LDAP_PROVIDER_ID_REPLACE_ME",
+  "config": {
+    "group.name.ldap.attribute": ["cn"],
+    "group.object.classes": ["groupOfNames"],
+    "preserve.group.inheritance": ["false"],
+    "ignore.missing.groups": ["false"],
+    "membership.ldap.attribute": ["member"],
+    "membership.attribute.type": ["DN"],
+    "membership.user.ldap.attribute": ["uid"],
+    "groups.dn": ["ou=Groups,dc=example,dc=com"],
+    "mode": ["READ_ONLY"],
+    "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
+    "mapped.group.attributes": ["description"],
+    "drop.non.existing.groups.during.sync": ["true"]
+  }
+}
+ # 1.  Get LDAP provider id
+ LDAP_PROVIDER_ID=$(./kcadm.sh get components -r my-realm \
+  --query 'providerId=ldap' --fields id --format csv | tail -n +2)
+ # 2. place ID into  json template
+ sed "s/LDAP_PROVIDER_ID_REPLACE_ME/$LDAP_PROVIDER_ID/" ldap-group-mapper.json > ldap-group-mapper-final.json
+
+# 3. Create mapper: 
+  ./kcadm.sh create components -r my-realm -f ldap-group-mapper-final.json
+## Result:  groups in Keycloak -> LDAP groups created and users assigned as members.

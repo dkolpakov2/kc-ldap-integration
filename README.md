@@ -481,25 +481,26 @@ GROUP_MAPPER_ID=$(./kcadm.sh get components -r my-realm \
 
 ldap-group-member.json template:
 {
-  "name": "ldap-group-mapper",
+  "name": "ad-group-mapper",
   "providerId": "group-ldap-mapper",
   "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
   "parentId": "LDAP_PROVIDER_ID_REPLACE_ME",
   "config": {
     "group.name.ldap.attribute": ["cn"],
-    "group.object.classes": ["groupOfNames"],
+    "group.object.classes": ["group"],
     "preserve.group.inheritance": ["false"],
     "ignore.missing.groups": ["false"],
     "membership.ldap.attribute": ["member"],
     "membership.attribute.type": ["DN"],
-    "membership.user.ldap.attribute": ["uid"],
-    "groups.dn": ["ou=Groups,dc=example,dc=com"],
+    "membership.user.ldap.attribute": ["distinguishedName"],
+    "groups.dn": ["CN=Users,DC=example,DC=com"],
     "mode": ["READ_ONLY"],
     "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
     "mapped.group.attributes": ["description"],
     "drop.non.existing.groups.during.sync": ["true"]
   }
 }
+
  # 1.  Get LDAP provider id
  LDAP_PROVIDER_ID=$(./kcadm.sh get components -r my-realm \
   --query 'providerId=ldap' --fields id --format csv | tail -n +2)
@@ -509,3 +510,49 @@ ldap-group-member.json template:
 # 3. Create mapper: 
   ./kcadm.sh create components -r my-realm -f ldap-group-mapper-final.json
 ## Result:  groups in Keycloak -> LDAP groups created and users assigned as members.
+
+### mapped.group.attributes field in the Keycloak LDAP Group Mapper tells Keycloak which AD group attributes we want to carry over and expose as Keycloak group attributes.
+
+## For Active Directory (AD), we can map any LDAP attribute available on the AD group object.
+1. attributes are available in AD groups, we can query them directly:
+
+ldapsearch -H ldap://your-ad-server -D "binduser@example.com" -w "password" \
+-b "CN=Users,DC=example,DC=com" "(objectClass=group)" cn description mail managedBy
+## List AD group attributes you can use (besides description):
+Attribute Name	          Meaning
+cn	                Common Name (group name itself).
+distinguishedName	  Full DN of the group.
+name	              Display name of the group.
+sAMAccountName	    Legacy logon name of the group.
+objectGUID	        Globally unique ID for the group.
+objectSid	          Security identifier (SID) for the group.
+mail	              Email address of the group.
+memberOf	          Groups that this group is a member of (nested membership).
+managedBy	          DistinguishedName of the user/group that manages this     group.
+whenCreated	        Timestamp when the group was created.
+whenChanged	        Timestamp of the last modification.
+info	              General info field (sometimes used for notes).
+telephoneNumber	    Telephone number, if set on the group object.
+url	                Web URL associated with the group.
+
+###  Inspecting mapper details
+./kcadm.sh get components/${GROUP_MAPPER_ID} -r my-realm-dev
+
+>> → Shows the configuration of that specific group mapper.
+
+1. Updating mapped attributes (like mapped.group.attributes)
+
+./kcadm.sh update components/${GROUP_MAPPER_ID} -r my-realm-dev -s 'config.mapped.group.attributes=["description","mail"]'
+
+2. Deleting a group mapper
+
+./kcadm.sh delete components/${GROUP_MAPPER_ID} -r my-realm-dev
+
+### Testing or verifying configuration
+### How to get the GROUP_MAPPER_ID:
+  >> Run this to list all components of type group-ldap-mapper:
+
+./kcadm.sh get components -r my-realm-dev \
+  --query 'providerId=group-ldap-mapper' \
+  --fields id,name,providerId \
+  --format csv

@@ -320,20 +320,6 @@ User:
   dmitry: 3b7f0b48-5b08-4ab8-b34f-2e866a7325df
   pass: admin
 -------------------------------------------------------------
-XXX. 
-    - Add automatic Let's Encrypt certs?
-    - Enable Kubernetes/AKS secret-based keystore loading?
-
- Postman Collection to test this setup
- Add Infinispan or YugabyteDB
- Helm chart version for AKS
- Kubernetes initContainer
- entrypoint.sh to prevent Keycloak booting if LDAP isn’t reachable
-
-
-    -  postman_collection.json file for download?
-    - Newman-based shell script for 100 users?
-    - Docker-based LDAP + Keycloak simulator for full testing?
 
 ## 2nd method= import realm
 
@@ -390,22 +376,23 @@ Group LDAP Mapper:
 }
 
 #### Login to the correct realm with admin privileges
-If you have an admin user in my-realm-dev:
+>> Prerequisite: admin user in my-realm-dev exists:
+### This user must have the realm-admin role inside the realm-management client of my-realm-dev.
+### We assign it in the Admin Console:
+  my-realm-dev → 
+          Clients → 
+              realm-management → Roles → realm-admin → Assign to admin user.
 
-bash
-Copy
-Edit
+>> bash
 ./kcadm.sh config credentials \
   --server http://localhost:8080 \
   --realm my-realm-dev \
   --user my-admin-user \
   --password 'my-password'
-This user must have the realm-admin role inside the realm-management client of my-realm-dev.
-You can assign it in the Admin Console:
-my-realm-dev → Clients → realm-management → Roles → realm-admin → Assign to your admin user.
+
 
 =====================================================
-Option 2: Pass as script argument
+## Select ENV: Pass as script argument
 
 #!/bin/bash
 MODE="$1"
@@ -639,16 +626,14 @@ done <<< "$USERS"
 =============================================
 ### Step 3: Generalize (map multiple groups automatically)
 
-If your LDAP already has user–group memberships, Keycloak will sync them automatically if you set up an LDAP Group Mapper.
-If not, you can drive it with a mapping file:
-
-username,groupname
-alice,dev-group
-bob,qa-group
-carol,admin-group
-
-
-And process like:
+If LDAP already has user–group memberships, Keycloak will sync them automatically if LDAP Group Mapperalready set up.
+If not, we can drive it with a mapping file 
+ - example:
+  username,groupname
+  alice,dev-group
+  bob,qa-group
+  carol,admin-group
+## And process like:
 
 while IFS=, read -r USERNAME GROUPNAME; do
   USER_ID=$(./kcadm.sh get users -r $REALM -q username=$USERNAME --fields id --format csv | tail -n +2 | tr -d '"')
@@ -660,5 +645,130 @@ while IFS=, read -r USERNAME GROUPNAME; do
   fi
 done < user-group-map.csv
 
+=============================================================
+== DB PostgreSQL=============================================
+Deploy:
+>>bash:
+  kubectl apply -f postgres-deployment.yaml
+>> helm
+  helm repo add keycloak https://charts.bitnami.com/bitnami
+  helm repo update
+
+helm install keycloak keycloak/keycloak \
+  --set auth.adminUser=admin \
+  --set auth.adminPassword=admin \
+  --set postgresql.enabled=false \
+  --set externalDatabase.host=postgres \
+  --set externalDatabase.user=keycloak \
+  --set externalDatabase.password=keycloak \
+  --set externalDatabase.database=keycloak
+
+>> Step 3: Expose Keycloak in AKS
+## If you’re using an Ingress + AGIC (Azure Application Gateway Ingress Controller):
+- Apply ingress and map DNS to Application Gateway → AKS service.
+
+>>yaml:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-ingress
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  rules:
+  - host: keycloak.mycompany.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: keycloak
+            port:
+              number: 80
+
+
+
+-------------
+>> yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  POSTGRES_DB: a2V5Y2xvYWs=          # base64("keycloak")
+  POSTGRES_USER: a2V5Y2xvYWs=        # base64("keycloak")
+  POSTGRES_PASSWORD: a2V5Y2xvYWs=    # base64("keycloak")
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - secretRef:
+            name: postgres-secret
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  ports:
+    - port: 5432
+  clusterIP: None
+  selector:
+    app: postgres
+
 ===============================================
 
+XXX. 
+    - Add automatic Let's Encrypt certs?
+    - Enable Kubernetes/AKS secret-based keystore loading?
+
+ Postman Collection to test this setup
+ Add Infinispan or YugabyteDB
+ Helm chart version for AKS
+ Kubernetes initContainer
+ entrypoint.sh to prevent Keycloak booting if LDAP isn’t reachable
+
+
+    -  postman_collection.json file for download?
+    - Newman-based shell script for 100 users?
+    - Docker-based LDAP + Keycloak simulator for full testing?
+
+    - Map users → groups using either LDAP’s native mappingdn
+    - Map users → groups using either LDAP’s native mappingdn
+    - Map users → groups using either LDAP’s native mappingdn
+    - Map users → groups using either LDAP’s native mappingdn
+
+===============================================    

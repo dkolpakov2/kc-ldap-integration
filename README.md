@@ -556,3 +556,109 @@ url	                Web URL associated with the group.
   --query 'providerId=group-ldap-mapper' \
   --fields id,name,providerId \
   --format csv
+### Sync
+./kcadm.sh create user-storage/${LDAP_PROVIDER_ID}/sync -r my-realm-dev -s action=triggerFullSync
+
+### Keycloak-only group membership via JSON:
+  # Create a group if not exists
+./kcadm.sh create groups -r my-realm-dev -s name=my-group
+
+  # Get group ID
+GROUP_ID=$(./kcadm.sh get groups -r my-realm-dev --fields id,name --format csv | grep my-group | cut -d, -f1)
+
+  # Assign user to group (by JSON)
+./kcadm.sh create users/<USER_ID>/groups/${GROUP_ID} -r my-realm-dev -s '{}'
+
+### ========================
+  - Configure the LDAP group mapper,
+  - Trigger a sync, and
+  - Verify users show up in the mapped groups
+
+=====================================================
+  Secure LDAP (LDAPS)
+  LDAP group membership check
+  Spring Boot version of this code
+  JSON input/output API version
+-----
+- Mapper tells Keycloak: “map AD groups under OU=Groups,... and use member attribute to find users.”
+- Sync pulls groups + memberships from AD into Keycloak.
+- Script lists groups and shows which groups a user belongs to.
+-------
+# 4. Ensure group exists
+GROUP_ID=$(./kcadm.sh get groups -r $REALM --query name=$GROUP_NAME --fields id --format csv | tail -n +2 | cut -d, -f1)
+if [ -z "$GROUP_ID" ]; then
+  echo "Group $GROUP_NAME not found. Creating..."
+  GROUP_ID=$(./kcadm.sh create groups -r $REALM -s name=$GROUP_NAME -i)
+fi
+
+# 5. Check if user exists
+USER_ID=$(./kcadm.sh get users -r $REALM -q username=$LOCAL_USER --fields id --format csv | tail -n +2 | cut -d, -f1)
+
+if [ -z "$USER_ID" ]; then
+  echo "User $LOCA*L_USER not found in Keycloak. Creating..."
+  USER_ID=$(./kcadm.sh create users -r $REALM -s username=$LOCAL_USER -s enabled=true -s email=$LOCAL_EMAIL -i)
+  # Optionally set password
+  ./kcadm.sh set-password -r $REALM --userid $USER_ID --new-password 'Passw0rd!' --temporary
+fi
+
+# 6. Assign user to group
+echo "Assigning $LOCAL_USER to group $GROUP_NAME..."
+./kcadm.sh update users/$USER_ID/groups/$GROUP_ID -r $REALM -s realm=$REALM
+
+# 7. Verify memberships
+echo "Groups for $LOCAL_USER:"
+./kcadm.sh get users/$USER_ID/groups -r $REALM
+
+=================================
+## Step 2: Loop through all users and map to groups
+REALM="my-realm-dev"
+
+# Example: Get all groups
+GROUPS=$(./kcadm.sh get groups -r $REALM --fields id,name --format csv | tail -n +2)
+
+# Example: Get all users
+USERS=$(./kcadm.sh get users -r $REALM --fields id,username --format csv | tail -n +2)
+
+# Loop through users and add to a group
+while IFS=, read -r USER_ID USERNAME; do
+  USER_ID=$(echo "$USER_ID" | tr -d '"')
+  USERNAME=$(echo "$USERNAME" | tr -d '"')
+
+  echo "Processing user $USERNAME ($USER_ID)"
+
+  # Pick group by name (example: "dev-group")
+  GROUP_ID=$(echo "$GROUPS" | grep "dev-group" | cut -d, -f1 | tr -d '"')
+
+  if [ -n "$GROUP_ID" ]; then
+    echo " -> Adding $USERNAME to group dev-group"
+    ./kcadm.sh update users/$USER_ID/groups/$GROUP_ID -r $REALM -s realm=$REALM
+  fi
+
+done <<< "$USERS"
+
+=============================================
+### Step 3: Generalize (map multiple groups automatically)
+
+If your LDAP already has user–group memberships, Keycloak will sync them automatically if you set up an LDAP Group Mapper.
+If not, you can drive it with a mapping file:
+
+username,groupname
+alice,dev-group
+bob,qa-group
+carol,admin-group
+
+
+And process like:
+
+while IFS=, read -r USERNAME GROUPNAME; do
+  USER_ID=$(./kcadm.sh get users -r $REALM -q username=$USERNAME --fields id --format csv | tail -n +2 | tr -d '"')
+  GROUP_ID=$(./kcadm.sh get groups -r $REALM --fields id,name --format csv | grep "$GROUPNAME" | cut -d, -f1 | tr -d '"')
+
+  if [ -n "$USER_ID" ] && [ -n "$GROUP_ID" ]; then
+    ./kcadm.sh update users/$USER_ID/groups/$GROUP_ID -r $REALM -s realm=$REALM
+    echo "Mapped $USERNAME -> $GROUPNAME"
+  fi
+done < user-group-map.csv
+
+===============================================
+

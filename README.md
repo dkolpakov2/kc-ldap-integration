@@ -707,8 +707,25 @@ done
 for user in "${!USER_IDS[@]}"; do
   for group in "${!GROUP_IDS[@]}"; do
     echo " Assigning user '$user' to group '$group'"
-    ./kcadm.sh update users/${USER_IDS[$user]}/groups/${GROUP_IDS[$group]} -r $REALM -s realm=$REALM
+    # The command for assigning a user to a group is 'create' with -b '{}'  <- sends empty json => it is required.
+    ./kcadm.sh create users/${USER_IDS[$user]}/groups/${GROUP_IDS[$group]} -r $REALM -s realm=$REALM -b '{}'
   done
+done
+## example:
+USER_ID=$(./kcadm.sh get users -r myrealm -q username=jdoe --fields id --format csv --noquotes | tail -n 1)
+GROUP_ID=$(./kcadm.sh get groups -r myrealm --fields id,name | jq -r '.[] | select(.name=="developers") | .id')
+
+./kcadm.sh create users/$USER_ID/groups/$GROUP_ID -r myrealm -b '{}'
+## test get user
+./kcadm.sh get users -r $REALM -q username=jdoe --fields id
+## test get group
+./kcadm.sh get groups -r $REALM | jq -r '.[] | select(.name=="developers") | .id'
+
+## Skip 2 values
+#!/bin/bash
+VALUES=("one" "two" "three" "four" "five")
+for ((i=2; i<${#VALUES[@]}; i++)); do
+    echo "Value: ${VALUES[$i]}"
 done
 
 -------------------------------
@@ -735,6 +752,27 @@ Enable DEBUG logs for LDAP sync in standalone.xml:
 
 =============================================================
 == DB PostgreSQL=============================================
+1. Local (Docker / Docker Compose)
+  1.1. Create a docker/ compose/ deployment configuration:
+  1.2. integrate SSL cert (Optional in local)
+  1.3 Keycloak Connection 
+2. Deployment to AKS (Azure Kubernetes Service)
+  2.1. PostgreSQL (Azure Flexible Server / StatefulSet in AKS)
+    postgres-deployment.yaml
+  2.2. Keycloak Helm chart
+  2.3. Expose Keycloak in AKS 
+    kind: Ingress
+  2.4  Integrate with SSL (Inject/ Vault/ Config ) 
+3. Integrate AKS with Azure Key Vault 
+  3.1. Create Requests
+  3.2. Install Drivers for SSL
+  3.3. Enable AKS Identity Mangement 
+  3.4. Update Vault with Certs and secrets , Sync Key Vault secrets
+  3.5. Assign AKS Identity permissions
+  3.6. Update Config for CSI (Container Storage Int) with required drivers
+  3.7. Deploy Keycloak with SSL connection
+
+
 Deploy:
 >>bash:
   kubectl apply -f postgres-deployment.yaml

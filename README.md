@@ -644,6 +644,62 @@ while IFS=, read -r USERNAME GROUPNAME; do
     echo "Mapped $USERNAME -> $GROUPNAME"
   fi
 done < user-group-map.csv
+------------------------------
+----Input Users into groups------------
+# Space-separated list of usernames (Keycloak usernames)
+USERS=("alice" "bob" "charlie")
+
+# Get Group IDs from group names
+declare -A GROUP_IDS
+for group in "${GROUPS[@]}"; do
+  GROUP_ID=$(./kcadm.sh get groups -r $REALM --fields id,name | jq -r ".[] | select(.name==\"$group\") | .id")
+  if [[ -n "$GROUP_ID" ]]; then
+    GROUP_IDS[$group]=$GROUP_ID
+  else
+    echo " Group '$group' not found in realm '$REALM'"
+  fi
+done
+
+# Get User IDs from usernames
+declare -A USER_IDS
+for user in "${USERS[@]}"; do
+  USER_ID=$(./kcadm.sh get users -r $REALM -q username=$user --fields id | jq -r '.[0].id')
+  if [[ -n "$USER_ID" && "$USER_ID" != "null" ]]; then
+    USER_IDS[$user]=$USER_ID
+  else
+    echo " User '$user' not found in realm '$REALM'"
+  fi
+done
+
+# Assign each user to each group
+for user in "${!USER_IDS[@]}"; do
+  for group in "${!GROUP_IDS[@]}"; do
+    echo " Assigning user '$user' to group '$group'"
+    ./kcadm.sh update users/${USER_IDS[$user]}/groups/${GROUP_IDS[$group]} -r $REALM -s realm=$REALM
+  done
+done
+
+-------------------------------
+### LDAP groups are empty in Keycloak
+ - Group Mapper is not configured with “Membership” properly
+ - In Keycloak, go to:
+    - User Federation → LDAP provider → Mappers → LDAP Group Mapper
+Check:
+    - Group Name LDAP attribute → usually cn
+    - Group Object Classes → usually groupOfNames or posixGroup (depends on your AD/LDAP)
+    - Membership LDAP Attribute → usually member or uniqueMember (Active Directory often uses member)
+    - Membership Attribute Type → DN for AD, sometimes UID for OpenLDAP
+    - User LDAP Attribute → usually dn
+    - User DN vs. UID mismatch
+    - AD groups often store members as distinguishedName (DN), e.g.
+
+>>>>>>>>>>>>
+Enable DEBUG logs for LDAP sync in standalone.xml:
+
+<logger category="org.keycloak.storage.ldap">
+  <level name="DEBUG"/>
+</logger>
+</logger>
 
 =============================================================
 == DB PostgreSQL=============================================

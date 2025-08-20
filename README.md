@@ -661,6 +661,37 @@ for group in "${GROUPS[@]}"; do
 done
 
 # Get User IDs from usernames
+1. from file
+# Space-separated list of usernames (Keycloak usernames)
+USERS=("alice" "bob" "charlie")
+
+# Get Group IDs from group names
+declare -A GROUP_IDS
+for group in "${GROUPS[@]}"; do
+  GROUP_ID=$(./kcadm.sh get groups -r $REALM --fields id,name | jq -r ".[] | select(.name==\"$group\") | .id")
+  if [[ -n "$GROUP_ID" ]]; then
+    GROUP_IDS[$group]=$GROUP_ID
+  else
+    echo " Group '$group' not found in realm '$REALM'"
+  fi
+done
+
+# get users from file:
+#!/bin/bash
+
+# Read users from CSV into USERS array
+USERS=()
+while IFS=, read -r user; do
+  # skip empty lines
+  [[ -z "$user" ]] && continue
+  USERS+=("$user")
+done < users.csv
+
+# Print to confirm
+echo "Loaded users: ${USERS[@]}"
+
+---------
+# Get User IDs from usernames
 declare -A USER_IDS
 for user in "${USERS[@]}"; do
   USER_ID=$(./kcadm.sh get users -r $REALM -q username=$user --fields id | jq -r '.[0].id')
@@ -670,6 +701,7 @@ for user in "${USERS[@]}"; do
     echo " User '$user' not found in realm '$REALM'"
   fi
 done
+
 
 # Assign each user to each group
 for user in "${!USER_IDS[@]}"; do

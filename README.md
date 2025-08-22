@@ -874,6 +874,346 @@ spec:
   clusterIP: None
   selector:
     app: postgres
+===============================================
+1. Why Infinispan with Keycloak
+  - Keycloak uses Infinispan internally for caching:
+    1. Authentication sessions
+    2. User sessions
+    3. Login failures
+    4. Offline tokens
+  2. By default, it runs in embedded mode (good for single-node dev).
+  3. In AKS HA clusters, must run it in remote/distributed mode, pointing to an external Infinispan cluster.
+  ### 2. Local Development Setup (Docker/Helm)
+    -Run Infinispan locally
+docker run -d --name infinispan -p 11222:11222 \
+  -e USER="admin" -e PASS="password" \
+  infinispan/server:14.0
+
+b) Install Keycloak with Infinispan integration (Helm)
+>> This config Keycloak to use remote Infinispan cache instead of embedded one.
+>> By using Bitnami’s Keycloak Helm chart:
+
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install keycloak bitnami/keycloak \
+  --set auth.adminUser=admin \
+  --set auth.adminPassword=adminpassword \
+  --set cache.enabled=true \
+  --set cache.stack=kubernetes \
+  --set extraEnvVars[0].name=KC_CACHE \
+  --set extraEnvVars[0].value=ispn \
+  --set extraEnvVars[1].name=KC_CACHE_REMOTE_HOST \
+  --set extraEnvVars[1].value=localhost \
+  --set extraEnvVars[2].name=KC_CACHE_REMOTE_PORT \
+  --set extraEnvVars[2].value=11222 \
+  --set extraEnvVars[3].name=KC_CACHE_REMOTE_USERNAME \
+  --set extraEnvVars[3].value=admin \
+  --set extraEnvVars[4].name=KC_CACHE_REMOTE_PASSWORD \
+  --set extraEnvVars[4].value=password
+
+3. AKS (Azure Kubernetes Service) Setup
+a) Deploy Infinispan cluster on AKS
+>> create: StatefulSet for Infinispan cluster
+          Expose port 11222
+          Secret with username/password for clients
+>> bash:          
+helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts
+helm install infinispan infinispan/infinispan \
+  --set security.endpointAuthentication=true \
+  --set security.endpointSecretName=infinispan-auth
+------------
+b) Deploy Keycloak pointing to Infinispan
+helm install keycloak bitnami/keycloak \
+  --set auth.adminUser=admin \
+  --set auth.adminPassword=adminpassword \
+  --set cache.enabled=true \
+  --set cache.stack=kubernetes \
+  --set extraEnvVars[0].name=KC_CACHE \
+  --set extraEnvVars[0].value=ispn \
+  --set extraEnvVars[1].name=KC_CACHE_REMOTE_HOST \
+  --set extraEnvVars[1].value=infinispan.default.svc.cluster.local \
+  --set extraEnvVars[2].name=KC_CACHE_REMOTE_PORT \
+  --set extraEnvVars[2].value=11222 \
+  --set extraEnvVars[3].name=KC_CACHE_REMOTE_USERNAME \
+  --set extraEnvVars[3].value=$(kubectl get secret infinispan-auth -o jsonpath='{.data.identities\.yaml}' | base64 -d | grep username | awk '{print $2}') \
+  --set extraEnvVars[4].name=KC_CACHE_REMOTE_PASSWORD \
+  --set extraEnvVars[4].value=$(kubectl get secret infinispan-auth -o jsonpath='{.data.identities\.yaml}' | base
+
+4. Verification
+  - Keycloak logs should show:
+    Using remote Infinispan cache...
+    Connected to Infinispan cluster: infinispan@11222
+  - Test by scaling Keycloak:
+>> bash: Keycloak already bundles Infinispan. Just start Keycloak:
+kubectl scale deployment keycloak --replicas=3
+docker run -p 8080:8080 quay.io/keycloak/keycloak:24.0 start-dev
+
+>>Local:
+docker run -it -p 11222:11222 \
+  -e USER=admin -e PASS=admin \
+  quay.io/infinispan/server:14.0
+
+### Testing Option B: External Infinispan (Standalone)
+ - Run Infinispan locally:
+
+docker run -it -p 11222:11222 \
+  -e USER=admin -e PASS=admin \
+  quay.io/infinispan/server:14.0
+
+## Configure Keycloak to use external Infinispan by editing conf/cache-ispn.xml:
+
+<infinispan>
+  <remote-cache-container name="external">
+    <remote-server host="localhost" port="11222"/>
+    <security>
+      <authentication>
+        <username>admin</username>
+        <password>admin</password>
+      </authentication>
+    </security>
+  </remote-cache-container>
+</infinispan>
+
+
+## Start Keycloak with external cache:
+  bin/kc.sh start --cache=ispn --cache-config=conf/cache-ispn.xml
+===================================================================
+
+3. AKS Setup (Helm)
+## Step 1: Deploy Infinispan to AKS
+
+Use the Infinispan Helm chart:
+
+helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts
+helm install infinispan infinispan/infinispan --set security.auth.enabled=true
+
+## Step 2: Deploy Keycloak with Helm
+helm repo add codecentric https://codecentric.github.io/helm-charts
+helm install keycloak codecentric/keycloak \
+  --set keycloak.replicas=3 \
+  --set keycloak.extraEnv[0].name=KEYCLOAK_CACHE \
+  --set keycloak.extraEnv[0].value=ispn \
+  --set keycloak.extraEnv[1].name=KEYCLOAK_CACHE_CONFIG_FILE \
+  --set keycloak.extraEnv[1].value=/opt/keycloak/conf/cache-ispn.xml
+
+Step 3: Configure Keycloak to Point to Infinispan
+
+Create a cache-ispn.xml ConfigMap:
+
+<infinispan>
+  <remote-cache-container name="external">
+    <remote-server host="infinispan.default.svc.cluster.local" port="11222"/>
+    <security>
+      <authentication>
+        <username>developer</username>
+        <password>password</password>
+      </authentication>
+    </security>
+  </remote-cache-container>
+</infinispan>
+
+
+Mount this config to Keycloak Pods:
+
+extraVolumes:
+  - name: cache-config
+    configMap:
+      name: cache-ispn
+
+extraVolumeMounts:
+  - name: cache-config
+    mountPath: /opt/keycloak/conf/cache-ispn.xml
+    subPath: cache-ispn.xml
+
+🔹 4. Verification
+  # Check if Keycloak connects to Infinispan:
+    kubectl logs keycloak-0 | grep infinispan
+  # Verify cache is distributed across pods:
+    kubectl exec -it infinispan-0 -- ./bin/cli.sh describe caches
+# AKS → External Infinispan StatefulSet, HA-ready Keycloak pods with shared cache
+------------------------------------------------
+###### full Helm values.yaml (with Infinispan + Keycloak pre-integrated)
+🔹 1. Local Setup (Docker / Docker Compose)
+Step 1: Run Infinispan Locally
+# docker-compose.yml
+version: '3.8'
+services:
+  infinispan:
+    image: infinispan/server:14.0
+    environment:
+      USER: admin
+      PASS: password
+    ports:
+      - "11222:11222"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command:
+      - start
+      - --cache=ispn
+      - --cache-stack=kubernetes
+    environment:
+      KC_CACHE: ispn
+      KC_CACHE_STACK: tcp
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KC_HOSTNAME: localhost
+      KC_LOG_LEVEL: INFO
+      KC_CACHE_REMOTE_HOST: infinispan
+      KC_CACHE_REMOTE_PORT: 11222
+      KC_CACHE_REMOTE_USERNAME: admin
+      KC_CACHE_REMOTE_PASSWORD: password
+    ports:
+      - "8080:8080"
+    depends_on:
+      - infinispan
+      - postgres
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: keycloak
+    ports:
+      - "5432:5432"
+
+
+Example infinispan.xml (custom config to point Keycloak to remote Infinispan):
+
+<infinispan>
+  <cache-container name="keycloak">
+    <transport stack="tcp"/>
+    <remote-store xmlns="urn:infinispan:config:store:remote:14.0">
+      <remote-server host="infinispan" port="11222"/>
+      <security>
+        <authentication>
+          <username>admin</username>
+          <password>password</password>
+        </authentication>
+      </security>
+    </remote-store>
+  </cache-container>
+</infinispan>
+
+🔹 2. AKS Setup (Helm)
+Step 1: Deploy Infinispan (Helm Chart)
+helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts
+helm install my-infinispan infinispan/infinispan \
+  --set security.auth.username=admin \
+  --set security.auth.password=password \
+  --namespace keycloak
+## or Infinispan Setup on AKS (Helm)
+helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts/
+helm repo update
+helm install infinispan infinispan/infinispan --namespace keycloak --create-namespace
+
+## Step 2: Deploy Keycloak with Infinispan Cache
+  Using the Bitnami Keycloak Helm chart:
+  Expose service (LoadBalancer or ClusterIP depending on your setup):
+>>bash
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+
+## Create Custom values for Keycloak
+auth:
+  adminUser: admin
+  adminPassword: admin
+
+postgresql:
+  enabled: true
+  auth:
+    username: keycloak
+    password: password
+    database: keycloak
+
+extraEnvVars:
+  - name: KC_CACHE
+    value: ispn
+  - name: KC_CACHE_STACK
+    value: kubernetes
+  - name: KC_CACHE_REMOTE_HOST
+    value: infinispan.keycloak.svc.cluster.local
+  - name: KC_CACHE_REMOTE_PORT
+    value: "11222"
+  - name: KC_CACHE_REMOTE_USERNAME
+    value: developer
+  - name: KC_CACHE_REMOTE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: infinispan-generated-secret
+        key: password
+
+
+------
+kubectl expose statefulset my-infinispan \
+  --name=my-infinispan-service \
+  --port=11222 \
+  --target-port=11222 \
+  --namespace keycloak
+
+Step 2: Deploy Keycloak with Helm
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install keycloak bitnami/keycloak \
+  --set auth.adminUser=admin \
+  --set auth.adminPassword=adminpassword \
+  --set externalDatabase.host=my-postgres.keycloak.svc.cluster.local \
+  --set externalDatabase.user=keycloak \
+  --set externalDatabase.password=keycloak \
+  --set externalDatabase.database=keycloak \
+  --set cache.enabled=true \
+  --set extraEnv[0].name=KC_CACHE \
+  --set extraEnv[0].value=ispn \
+  --set extraEnv[1].name=KC_CACHE_CONFIG_FILE \
+  --set extraEnv[1].value=/opt/bitnami/keycloak/conf/infinispan.xml
+
+
+Then mount infinispan.xml via a ConfigMap:
+
+kubectl create configmap keycloak-infinispan-conf \
+  --from-file=infinispan.xml \
+  -n keycloak
+
+
+Patch the Keycloak deployment to mount it:
+
+volumeMounts:
+  - name: infinispan-conf
+    mountPath: /opt/bitnami/keycloak/conf/infinispan.xml
+    subPath: infinispan.xml
+
+volumes:
+  - name: infinispan-conf
+    configMap:
+      name: keycloak-infinispan-conf
+
+#### 🔹 3. Verify Integration
+## Check Keycloak logs:
+>> bash
+  kubectl logs -f deploy/keycloak -n keycloak
+
+
+## Test:
+ - logs showing remote Infinispan connection.
+ - Log in to Keycloak Admin Console → Monitor cluster nodes (show Infinispan caches).
+  - show Keycloak caches:
+    Infinispan dashboard (http://<infinispan-host>:11222) 
+
+### 4. Verify Infinispan Connection
+  1. Local: open http://localhost:11222/console
+  2. Thank youAKS: port-forward to Infinispan service:
+    kubectl port-forward svc/infinispan 11222:11222 -n keycloak
+
+
+===================================================================
+5. Production Notes
+  Use TLS between Keycloak and Infinispan (enable with --set security.endpointEncryption=true).
+  Store Infinispan creds in Kubernetes Secrets (instead of plaintext).
+  If you run multiple Keycloak instances, ensure:
+    KC_CACHE=ispn
+    KC_CACHE_STACK=kubernetes
+  Configure readiness/liveness probes so Keycloak only starts after Infinispan is reachable.
 
 ===============================================
 

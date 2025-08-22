@@ -1097,14 +1097,15 @@ Example infinispan.xml (custom config to point Keycloak to remote Infinispan):
   </cache-container>
 </infinispan>
 
-🔹 2. AKS Setup (Helm)
+🔹 2. AKS Setup (Helm) Helm Chart (Local Minikube or Docker Desktop)
+- Install Infinispan Operator:
 Step 1: Deploy Infinispan (Helm Chart)
 helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts
 helm install my-infinispan infinispan/infinispan \
   --set security.auth.username=admin \
   --set security.auth.password=password \
   --namespace keycloak
-## or Infinispan Setup on AKS (Helm)
+## or Infinispan Setup on AKS (Helm) with Infinispan cache enabled:
 helm repo add infinispan https://infinispan.github.io/infinispan-helm-charts/
 helm repo update
 helm install infinispan infinispan/infinispan --namespace keycloak --create-namespace
@@ -1205,7 +1206,54 @@ volumes:
   2. Thank youAKS: port-forward to Infinispan service:
     kubectl port-forward svc/infinispan 11222:11222 -n keycloak
 
+====================================================================
 
+### Option 3. => AKS Deployment with Helm
+Step 1: Deploy Infinispan Operator
+helm install infinispan-operator infinispan/infinispan-operator
+
+
+## Create an Infinispan cluster in AKS:
+
+apiVersion: infinispan.org/v1
+kind: Infinispan
+metadata:
+  name: kc-infinispan
+spec:
+  replicas: 2
+  service:
+    type: DataGrid
+  security:
+    endpointSecretName: kc-infinispan-secret
+
+## Step 2: Expose Secret for Keycloak
+  Get username/password from secret:
+kubectl get secret kc-infinispan-secret -o yaml
+
+## Step 3: Deploy Keycloak Helm Chart (Codecentric or Bitnami)
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install keycloak bitnami/keycloak \
+  --set cache.enabled=true \
+  --set cache.stack=tcp \
+  --set cache.remoteServers=kc-infinispan:11222 \
+  --set cache.username=admin \
+  --set cache.password=password
+
+4. Validation
+
+# Check Keycloak logs:
+kubectl logs -f keycloak-0
+
+# Expected:
+  INFO  [org.infinispan] ISPN000621: Connected to remote Infinispan server kc-infinispan:11222
+
+# Check cluster view in Infinispan:
+
+kubectl port-forward svc/kc-infinispan 11222:11222
+curl -u admin:password http://localhost:11222/rest/v2/cache-managers/default/health/status
+  Should return HEALTHY.postgresrecycle
+**
+*  
 ===================================================================
 5. Production Notes
   Use TLS between Keycloak and Infinispan (enable with --set security.endpointEncryption=true).

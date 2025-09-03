@@ -1462,6 +1462,179 @@ kubectl create secret generic keycloak-truststore -n keycloak \
 >> kubectl create namespace keycloak
 >> helm repo add keycloak https://charts.bitnami.com/bitnami
 >> helm install keycloak keycloak/keycloak -n keycloak -f values.yaml
+# Create Postgres on AKS with Helm:
+>> helm install keycloak-db bitnami/postgresql -n keycloak \
+  --set auth.username=kcuser,auth.password=kcpassword,auth.database=keycloak
+# Store credentials in a secret:
+>> kubectl create secret generic keycloak-db-secret -n keycloak \
+  --from-literal=DB_USER=kcuser \
+  --from-literal=DB_PASSWORD=kcpassword
+
+=======================================================
+## HA (High Availability for Keycloak)
+steps + configuration to run Keycloak with 
+      - multiple pods, 
+      - shared state  
+      - stable DB/cache in AKS.
+🔹 1. Prerequisites
+    - AKS cluster created (az aks create …)
+    - Ingress controller (e.g., NGINX Ingress or Azure Application Gateway Ingress Controller)
+    - External database (PostgreSQL, Yugabyte, or Azure Database for PostgreSQL)
+    - Shared distributed cache (Infinispan or JGroups/Kubernetes stack)
+    - TLS certificates (via Cert-Manager or manual secret)
+✅ Summary
+  For HA in AKS:
+    - Use Postgres/Yugabyte (shared DB)
+    - Use Infinispan or JGroups for caching
+    - Run 2–3 Keycloak pods minimum
+    - Enable Ingress with TLS
+    - Configure readiness/liveness probes
+    - Use HPA for scaling    
+    
+🔹 2. Namespace
+    >> kubectl create namespace keycloak
+🔹 3. Database (PostgreSQL recommended)  Keycloak cannot share state without a proper DB. Can be created with Helm:
+  >> helm repo add bitnami https://charts.bitnami.com/bitnami
+  >> helm install keycloak-db bitnami/postgresql -n keycloak \
+    --set auth.username=kcuser,auth.password=kcpassword,auth.database=keycloak
+
+🔹4. Store credentials in a secret:
+>> kubectl create secret generic keycloak-db-secret -n keycloak \
+  --from-literal=DB_USER=kcuser \
+  --from-literal=DB_PASSWORD=kcpassword    
+🔹 4. Caching for Multi-Pod
+  Keycloak needs Infinispan distributed cache for session clustering.
+  Two options:
+    1. Kubernetes JGroups Stack (simpler, no external Infinispan cluster)
+    2. Dedicated Infinispan cluster (preferred for large setups)
+Example config for Kubernetes JGroups Stack:
+
+extraEnv:
+  - name: KC_CACHE
+    value: ispn
+  - name: KC_CACHE_STACK
+    value: kubernetes
+🔹 5. Keycloak Deployment (Helm values.yaml)
+
+Here’s a multi-pod ready override:
+
+replicaCount: 3
+
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: 24.0.3
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  hostname: keycloak.mydomain.com
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  tls:
+    - hosts:
+        - keycloak.mydomain.com
+      secretName: keycloak-tls
+
+extraEnv:
+  - name: KC_DB
+    value: postgres
+  - name: KC_DB_URL
+    value: jdbc:postgresql://keycloak-db-postgresql.keycloak.svc.cluster.local:5432/keycloak
+  - name: KC_DB_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-db-secret
+        key: DB_USER
+  - name: KC_DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-db-secret
+        key: DB_PASSWORD
+  - name: KC_CACHE
+    value: ispn
+  - name: KC_CACHE_STACK
+    value: kubernetes
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+  - name: KC_METRICS_ENABLED
+    value: "true"
+  - name: KC_PROXY
+    value: edge
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 1
+    memory: 2Gi
+
+🔹 6. Scaling Keycloak Pods
+
+Deploy Keycloak with Helm:
+
+helm repo add keycloak https://charts.bitnami.com/bitnami
+helm install keycloak keycloak/keycloak -n keycloak -f values.yaml
+
+
+Scale pods:
+
+kubectl scale deployment keycloak --replicas=3 -n keycloak
+
+🔹 7. Health Checks (Important for HA)
+
+Keycloak exposes health endpoints:
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+
+
+These ensure rolling updates & scaling are safe.
+
+🔹 8. Ingress Controller
+
+Expose Keycloak securely:
+
+ingress:
+  enabled: true
+  hostname: keycloak.mydomain.com
+  tls:
+    - secretName: keycloak-tls
+      hosts:
+        - keycloak.mydomain.com
+
+
+If using Azure Application Gateway Ingress Controller, set:
+
+annotations:
+  kubernetes.io/ingress.class: azure/application-gateway
+
+🔹 9. TLS / Certificates
+
+Either:
+
+Use Cert-Manager (ClusterIssuer with Let’s Encrypt)
+
+Or manually upload certs:
+
+kubectl create secret tls keycloak-tls --cert=cert.pem --key=key.pem -n keycloak
+
+🔹 10. Horizontal Autoscaling (Optional)
+
+Enable HPA for Keycloak:
+
+kubectl autoscale deployment keycloak \
+  --cpu-percent=80 --min=3 --max=6 -n keycloak
 
 ====================================================
 XXX. 

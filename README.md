@@ -1833,18 +1833,17 @@ spec:
               number: 8080
 ============================
 🔹 Deploy in AKS
-kubectl apply -f keycloak-ha.yaml
+>> kubectl apply -f keycloak-ha.yaml
 
 🔹 Verify
-
 Pods:
-  kubectl get pods -n keycloak
+>>  kubectl get pods -n keycloak
 
 Services:
-  kubectl get svc -n keycloak
+>>  kubectl get svc -n keycloak
 
 Ingress:
-  kubectl get ingress -n keycloak
+>>  kubectl get ingress -n keycloak
 
 ========================================= 
 Summary:

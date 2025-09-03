@@ -1636,6 +1636,223 @@ Enable HPA for Keycloak:
 kubectl autoscale deployment keycloak \
   --cpu-percent=80 --min=3 --max=6 -n keycloak
 
+
+====================================================
+Keycloak HA in AKS — this will include:
+  - Namespace
+  - Secrets (DB credentials, TLS)
+  - PostgreSQL StatefulSet (optional, for demo only — in production use Azure DB for PostgreSQL)
+  - Keycloak Deployment with 3 replicas
+  - Service (ClusterIP + optional headless)
+  - Ingress with TLS
+
+🗂️ keycloak-ha.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+---
+# 🔐 DB Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-db-secret
+  namespace: keycloak
+type: Opaque
+stringData:
+  DB_USER: kcuser
+  DB_PASSWORD: kcpassword
+---
+# 🔐 TLS Secret (replace with your certs or use cert-manager)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-tls
+  namespace: keycloak
+type: kubernetes.io/tls
+data:
+  tls.crt: BASE64_ENCODED_CERT
+  tls.key: BASE64_ENCODED_KEY
+---
+# 🗄️ PostgreSQL (demo — replace with Azure Postgres in prod)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-db
+  namespace: keycloak
+spec:
+  serviceName: keycloak-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-db
+  template:
+    metadata:
+      labels:
+        app: keycloak-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: keycloak
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: DB_PASSWORD
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  namespace: keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+  selector:
+    app: keycloak-db
+---
+### Keycloak Deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:24.0.3
+        args: ["start"]
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL
+          value: jdbc:postgresql://keycloak-db.keycloak.svc.cluster.local:5432/keycloak
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: DB_USER
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: DB_PASSWORD
+        - name: KC_PROXY
+          value: edge
+        - name: KC_HOSTNAME
+          value: keycloak.example.com
+        - name: KC_CACHE
+          value: ispn
+        - name: KC_CACHE_STACK
+          value: kubernetes
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+#  Keycloak Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: keycloak
+---
+# 🌍 Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: keycloak
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+      - keycloak.example.com
+    secretName: keycloak-tls
+  rules:
+  - host: keycloak.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: keycloak
+            port:
+              number: 8080
+============================
+🔹 Deploy in AKS
+kubectl apply -f keycloak-ha.yaml
+
+🔹 Verify
+
+Pods:
+  kubectl get pods -n keycloak
+
+Services:
+  kubectl get svc -n keycloak
+
+Ingress:
+  kubectl get ingress -n keycloak
+
+========================================= 
+Summary:
+✅ This will give:
+  - 3 Keycloak pods in HA mode
+  - Postgres running in AKS (replace with Azure PaaS DB in production)
+  - Ingress with TLS (replace certs or integrate cert-manager)
+  - Cluster-aware cache (Infinispan via JGroups Kubernetes stack)
 ====================================================
 XXX. 
     - Add automatic Let's Encrypt certs?

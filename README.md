@@ -225,14 +225,14 @@ docker run --name keycloak \
     # Set workdir for scripts
     WORKDIR /opt/keycloak
 
-    # Copy your custom entrypoint script
+    # Copy  custom entrypoint script
     COPY entrypoint.sh /opt/keycloak/entrypoint.sh
     RUN chmod +x /opt/keycloak/entrypoint.sh
 
     # Pre-build the Keycloak distribution (required for running commands in custom images)
     RUN /opt/keycloak/bin/kc.sh build
 
-    # Use your custom entrypoint
+    # Use  custom entrypoint
     ENTRYPOINT ["/opt/keycloak/entrypoint.sh"]
 ------------------------------------------
 >> entrypoint.sh
@@ -240,12 +240,12 @@ docker run --name keycloak \
   FROM quay.io/keycloak/keycloak:24.0.1
   # Set workdir for scripts
   WORKDIR /opt/keycloak
-  # Copy your custom entrypoint script
+  # Copy  custom entrypoint script
   COPY entrypoint.sh /opt/keycloak/entrypoint.sh
   RUN chmod +x /opt/keycloak/entrypoint.sh
   # Pre-build the Keycloak distribution (required for running commands in custom images)
   RUN /opt/keycloak/bin/kc.sh build
-  # Use your custom entrypoint
+  # Use  custom entrypoint
   ENTRYPOINT ["/opt/keycloak/entrypoint.sh"]
 -----------------------------------------
 # Start Keycloak  >>>>>>>>>>>>>>>>>>>>>>>>
@@ -328,10 +328,10 @@ User:
  >> Pre-requisites
   - Keycloak already has an LDAP User Federation provider set up and working.
   - LDAP contains group objects, e.g. cn=admins,ou=Groups,dc=example,dc=com
-  - Your LDAP user objects have membership attributes like memberOf or group entries contain member attributes.
+  -  LDAP user objects have membership attributes like memberOf or group entries contain member attributes.
   - Add Group Mapper in Keycloak Admin Console
     Go to:
-      - User Federation → <Your LDAP provider name> → Mappers → Create
+      - User Federation → < LDAP provider name> → Mappers → Create
       - Fill in the mapper details:
       - Name: LDAP Group Mapper
       - Mapper Type: group-ldap-mapper
@@ -435,12 +435,12 @@ If you want LDAP to import fresh, remove conflicting accounts:
 LDAP_PROVIDER_ID=$(./kcadm.sh get components -r master \
     --query 'name=ldap' --fields id --format csv | tail -n +2 | cut -d, -f1)
 
-sed -i "s/PUT_YOUR_LDAP_PROVIDER_ID_HERE/$LDAP_PROVIDER_ID/" ldap-group-config.json
+sed -i "s/PUT__LDAP_PROVIDER_ID_HERE/$LDAP_PROVIDER_ID/" ldap-group-config.json
 
 ./kcadm.sh create components -r master -f ldap-group-config.jsonadmin     
 
 ## Group mapping :
-# 1. Get your LDAP provider ID
+# 1. Get  LDAP provider ID
 LDAP_PROVIDER_ID=$(./kcadm.sh get components -r my-realm \
   --query 'providerId=ldap' \
   --fields id \
@@ -503,7 +503,7 @@ ldap-group-member.json template:
 ## For Active Directory (AD), we can map any LDAP attribute available on the AD group object.
 1. attributes are available in AD groups, we can query them directly:
 
-ldapsearch -H ldap://your-ad-server -D "binduser@example.com" -w "password" \
+ldapsearch -H ldap://-ad-server -D "binduser@example.com" -w "password" \
 -b "CN=Users,DC=example,DC=com" "(objectClass=group)" cn description mail managedBy
 ## List AD group attributes you can use (besides description):
 Attribute Name	          Meaning
@@ -735,7 +735,7 @@ done
     - User Federation → LDAP provider → Mappers → LDAP Group Mapper
 Check:
     - Group Name LDAP attribute → usually cn
-    - Group Object Classes → usually groupOfNames or posixGroup (depends on your AD/LDAP)
+    - Group Object Classes → usually groupOfNames or posixGroup (depends on  AD/LDAP)
     - Membership LDAP Attribute → usually member or uniqueMember (Active Directory often uses member)
     - Membership Attribute Type → DN for AD, sometimes UID for OpenLDAP
     - User LDAP Attribute → usually dn
@@ -1112,7 +1112,7 @@ helm install infinispan infinispan/infinispan --namespace keycloak --create-name
 
 ## Step 2: Deploy Keycloak with Infinispan Cache
   Using the Bitnami Keycloak Helm chart:
-  Expose service (LoadBalancer or ClusterIP depending on your setup):
+  Expose service (LoadBalancer or ClusterIP depending on  setup):
 >>bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
@@ -1263,8 +1263,207 @@ curl -u admin:password http://localhost:11222/rest/v2/cache-managers/default/hea
     KC_CACHE_STACK=kubernetes
   Configure readiness/liveness probes so Keycloak only starts after Infinispan is reachable.
 
-===============================================
+=============================================================================
+🔹 1. What "App Context" Usually Means in AKS
+In AKS (or Kubernetes in general), application context can refer to:
+   - Kubernetes Context: The kubectl context that tells which AKS cluster/namespace you’re operating in.
 
+  - Application Deployment Context: The runtime environment and configuration that  app (e.g., Keycloak) runs with.
+
+  - Helm Release Context: Values and overrides you pass to Helm to customize deployment.
+=============
+
+🔹 2. Kubernetes Context in AKS
+  If you have multiple clusters, kubectl must know which AKS cluster to talk to.
+Check  contexts:
+    kubectl config get-contexts
+Switch context:
+    kubectl config use-context <aks-cluster-name>
+
+If you don’t have the AKS context locally, fetch it:
+  az aks get-credentials -g <resource-group> -n <aks-cluster-name>
+=============
+
+🔹 3. Application Context for Keycloak in AKS
+  When you deploy Keycloak in AKS (via Helm chart or custom manifests), you define context through:
+
+## Namespace
+  >> kubectl create namespace keycloak
+
+## Helm release
+Example:
+
+helm install keycloak codecentric/keycloakx \
+  -n keycloak \
+  -f values.yaml
+
+
+## ConfigMaps & Secrets
+  - Store DB URLs, Infinispan configs, LDAP configs, etc.
+>>
+kubectl create secret generic keycloak-db-secret \
+  --from-literal=DB_USER=kcuser \
+  --from-literal=DB_PASSWORD=kcpass
+
+
+## Environment Variables (via Helm values or YAML)
+
+extraEnv: 
+  - name: KC_DB_URL
+    value: jdbc:postgresql://postgres.keycloak.svc.cluster.local:5432/keycloak
+  - name: KC_CACHE
+    value: ispn
+
+## This is an application runtime context in AKS.
+============
+
+🔹 4. Integration Contexts in AKS
+    If running Keycloak + Infinispan + LDAP in AKS:
+
+Keycloak needs service DNS for Infinispan:
+ispn-0.ispn.keycloak.svc.cluster.local
+
+Keycloak needs DNS for LDAP or AD (usually external, so via ServiceEntry or ClusterIP).
+
+Secure them with TLS secrets stored in Kubernetes.
+============
+
+🔹 5. Full "App Context" in AKS for Keycloak
+    1. Namespace keycloak
+    2. Keycloak configured with Infinispan (distributed cache)
+    3. PostgreSQL DB for Keycloak
+    4. LDAP federation integration (Active Directory or OpenLDAP)
+
+### application context includes:
+  Namespace keycloak
+  Helm release keycloak
+  DB + cache configs
+  Ingress hostname
+
+✅ AKS app context = that define how  app runs.
+    = cluster/namespace 
+    + Helm values 
+    + secrets/config 
+
+----------------------------------------------------------
+values.yaml (Helm for Keycloak):
+
+# replicas: 2
+# Deploy Keycloak with Infinispan and LDAP in AKS
+
+replicaCount: 2
+namespace: keycloak
+
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: 24.0.3
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  hostname: keycloak.example.com
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  tls:
+    - hosts:
+        - keycloak.example.com
+      secretName: keycloak-tls
+
+extraEnv:
+  # Database
+  - name: KC_DB
+    value: postgres
+  - name: KC_DB_URL
+    value: jdbc:postgresql://postgresql.keycloak.svc.cluster.local:5432/keycloak
+  - name: KC_DB_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-db-secret
+        key: DB_USER
+  - name: KC_DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-db-secret
+        key: DB_PASSWORD
+
+  # Infinispan Distributed Cache
+  - name: KC_CACHE
+    value: ispn
+  - name: KC_CACHE_STACK
+    value: kubernetes
+  - name: KC_CACHE_CONFIG_FILE
+    value: cache-ispn.xml
+
+  # LDAP Federation
+  - name: LDAP_CONNECTION_URL
+    value: ldaps://ldap.keycloak.svc.cluster.local:636
+  - name: LDAP_BIND_DN
+    valueFrom:
+      secretKeyRef:
+        name: ldap-secret
+        key: binddn
+  - name: LDAP_BIND_CREDENTIALS
+    valueFrom:
+      secretKeyRef:
+        name: ldap-secret
+        key: password
+  - name: LDAP_USERS_DN
+    value: "ou=Users,dc=example,dc=com"
+  - name: LDAP_GROUPS_DN
+    value: "ou=Groups,dc=example,dc=com"
+
+volumes:
+  - name: keycloak-truststore
+    secret:
+      secretName: keycloak-truststore
+volumeMounts:
+  - mountPath: /opt/keycloak/conf/truststore
+    name: keycloak-truststore
+    readOnly: true
+
+postgresql:
+  enabled: true
+  auth:
+    username: kcuser
+    password: kcpassword
+    database: keycloak
+
+ispn:
+  enabled: true
+  replicas: 2
+  service:
+    name: ispn
+    port: 7800
+
+ 
+=====================================================
+============= Secrets for DB + LDAP + TLS ===========
+
+🗂️ Supporting Secrets (create before Helm install)
+>>🔐 DB Secret 
+kubectl create secret generic keycloak-db-secret -n keycloak \
+  --from-literal=DB_USER=kcuser \
+  --from-literal=DB_PASSWORD=kcpassword
+🔐 LDAP Secret
+kubectl create secret generic ldap-secret -n keycloak \
+  --from-literal=binddn="cn=admin,dc=example,dc=com" \
+  --from-literal=password="ldappassword"
+
+🔐 Truststore Secret
+kubectl create secret generic keycloak-truststore -n keycloak \
+  --from-file=truststore.jks
+======================================================
+### Deploy
+
+>> kubectl create namespace keycloak
+>> helm repo add keycloak https://charts.bitnami.com/bitnami
+>> helm install keycloak keycloak/keycloak -n keycloak -f values.yaml
+
+====================================================
 XXX. 
     - Add automatic Let's Encrypt certs?
     - Enable Kubernetes/AKS secret-based keystore loading?

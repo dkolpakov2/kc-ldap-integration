@@ -159,6 +159,30 @@ kubectl create -f deployment-service.yaml -n ds --save-config
 kubectl top nodes
 kubectl cluster-info dump
 kubectl describe secrets svc-secret -n default
+===============================================================================
+
+Azure Connect by CLI:
+1.  az login 
+2.  will prompt to Browser and use creds or
+for Service principals(automation): 
+    >> az login --service-principal -u <APP_ID> -p <PASSWORD> --tenant <TENANT_ID>
+3.  
+    >> az account set --subscription "<your-subscription-id-or-name>"
+4. Step 4. Get AKS Cluster Credentials
+    >>    az aks get-credentials --resource-group <myResourceGroup> --name <myAKSCluster>
+   To overwrite instead of merging:
+    >>    az aks get-credentials --resource-group <myResourceGroup> --name <myAKSCluster> --overwrite-existing
+5. Step 5. Verify Connection
+    >> kubectl get nodes
+  5.2 Check cluster list:
+    za aks list -o table
+  5.3. Check cluster info:
+  az aks show --resource-group <myResourceGroup> --name <myAKSCluster> -o table
+  5.4. Switch context:
+    kubectl config get-contexts
+    kubectl config use-context <context-name>
+
+  
 ------------------------------------MINIKUBE-----------------------------------
 choco install minikube -y
 # Minikube:

@@ -2,7 +2,7 @@ replicaCount: 5
 
 auth:
   adminUser: admin
-  adminPassword: admin
+  adminPassword: admin123
 
 proxy: edge
 httpRelativePath: /
@@ -22,14 +22,6 @@ service:
     https: 8443
 
 extraEnvVars:
-  - name: KC_DB
-    value: "postgres"
-  - name: KC_DB_URL
-    value: "jdbc:postgresql://remote-postgres.example.com:5432/keycloak"
-  - name: KC_DB_USERNAME
-    value: "esskeycloakuser"
-  - name: KC_DB_PASSWORD
-    value: ""
   - name: KC_CACHE
     value: "ispn"
   - name: KC_CACHE_STACK
@@ -40,18 +32,22 @@ extraEnvVars:
     value: "false"
 
 persistence:
-  enabled: false   # since DB is external, no local PVC needed
+  enabled: false
 
 externalDatabase:
-  enabled: true
-  existingSecret: ""   # not using chart secret; relying on extraEnvVars
-  host: remote-postgres.example.com
+  host: dbhost
   port: 5432
-  user: keycloakuser
-  password: keycloak
+  user: kcuser
+  password: kcpassword
   database: keycloak
 
 podAntiAffinityPreset: hard
+podAffinityPreset: ""
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
 topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: topology.kubernetes.io/zone

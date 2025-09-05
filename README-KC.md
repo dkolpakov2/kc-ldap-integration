@@ -2061,23 +2061,38 @@ extraEnvVars:
     value: "-Djgroups.dns.query=keycloak-headless.keycloak.svc.cluster.local"
   - name: KC_HOSTNAME_STRICT
     value: "false"
+# get secret
+extraEnvVarsSecret: pgsql-db-secret
 
 persistence:
   enabled: false
 
 externalDatabase:
-  host: dbhost
+  enabled: true
+  host: remote-postgres.example.com
   port: 5432
-  user: kcuser
-  password: kcpassword
+  user: keycloakuser
+  existingSecret: pgsql-db-secret
+  existingSecretPasswordKey: KC_DB_PASSWORD
   database: keycloak
 
 podAntiAffinityPreset: hard
-podAffinityPreset: ""
-nodeAffinityPreset:
-  type: ""
-  key: ""
-  values: []
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: keycloak
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+
 
 topologySpreadConstraints:
   - maxSkew: 1
@@ -2115,6 +2130,19 @@ ingress:
 3. Verify pods are spread across zones:
 >> kubectl get pods -n keycloak -o wide
 
+===========================
+🔹 Step 1: Create the Secret (if not already created)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgsql-db-secret
+  namespace: keycloak
+type: Opaque
+stringData:
+  KC_DB_PASSWORD: "keycloak"
+---------------
+## Apply it:
+  kubectl apply -f pgsql-db-secret.yaml
 
 ====================================================
 XXX. 

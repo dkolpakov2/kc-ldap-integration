@@ -372,6 +372,27 @@ Group LDAP Mapper:
     "mode": ["READ_ONLY"],
     "groups.path": ["/"],
     "drop.non.existing.groups.during.sync": ["false"]
+    {
+  "name": "group-mapper",
+  "providerId": "group-ldap-mapper",
+  "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
+  "parentId": "${LDAP_PROVIDER_ID_changeme}",
+  "config": {
+    "groups.dn": ["OU=Groups,DC=dev3,DC=com, DC=net"],
+    "group.name.ldap.attribute": ["cn"],
+    "group.object.classes": ["group"],
+    "preserve.group.inheritance": ["false"],
+    "ignore.missing.groups": ["true"],
+    "membership.ldap.attribute": ["member"],
+    "membership.attribute.type": ["DN"],
+    "membership.user.ldap.attribute": ["DN"],
+    "mode": ["READ_ONLY"],
+,
+    "mapped.group.attributes": ["memberOf"],
+    "drop.non.existing.groups.during.sync": ["true"],
+    "groups.path": ["/"],
+    "memberof.ldap.attribute": ["memberOf"],
+    "multiple.parents.allowed": ["false"]   <--- 🔑 Important!
   }
 }
 
@@ -1836,6 +1857,8 @@ spec:
 >> kubectl apply -f keycloak-ha.yaml
 
 🔹 Verify
+NOdes: (if shows then config is correct)
+  kubectl get nodes
 Pods:
 >>  kubectl get pods -n keycloak
 
@@ -1852,6 +1875,160 @@ Summary:
   - Postgres running in AKS (replace with Azure PaaS DB in production)
   - Ingress with TLS (replace certs or integrate cert-manager)
   - Cluster-aware cache (Infinispan via JGroups Kubernetes stack)
+
+=====================================================
+HA High Avaliability for Keycloak!
+=====================================================
+1️⃣ Key Considerations for Keycloak HA
+  - Stateless pods: Keycloak itself should be stateless → use database-backed persistence (PostgreSQL, YugabyteDB, etc.).
+  - Infinispan distributed cache: Required for multi-node session clustering.
+  - Multi-zone: Use Kubernetes PodAntiAffinity + topology spread constraints to spread pods across AZs.
+  - Ingress: Load balancer (NGINX, Traefik, Azure AGIC, etc.) for external access.
+  - Secrets: TLS certificates + DB credentials in Kubernetes Secrets.
+
+2️⃣ High Availability Deployment (5 Pods, Multi-zone)
+## 🔹 keycloak-deployment.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak
+  namespace: keycloak
+labels:
+  app: keycloak
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: keycloak
+  serviceName: keycloak-headless
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - keycloak
+              topologyKey: "topology.kubernetes.io/zone"
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: keycloak
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:24.0.3
+        args:
+          - "start"
+          - "--optimized"
+        env:
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: jdbc-url
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: username
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-secret
+              key: password
+        - name: KC_CACHE
+          value: ispn
+        - name: KC_CACHE_STACK
+          value: kubernetes
+        - name: KC_HOSTNAME_STRICT
+          value: "false"
+        - name: JAVA_OPTS_APPEND
+          value: "-Djgroups.dns.query=keycloak-headless.keycloak.svc.cluster.local"
+        ports:
+        - containerPort: 8080
+        - containerPort: 8443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+  - name: https
+    port: 8443
+  selector:
+    app: keycloak
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-headless
+  namespace: keycloak
+spec:
+  clusterIP: None
+  selector:
+    app: keycloak
+  ports:
+  - port: 7800
+    name: jgroups
+
+
+========================
+## 🔹 ingress.yaml (multi-zone LB entrypoint)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: keycloak
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - keycloak.example.com
+    secretName: keycloak-tls
+  rules:
+  - host: keycloak.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: keycloak
+            port:
+              number: 8080
+
+## 3️⃣ Database Secret (Postgres / YugabyteDB)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-db-secret
+  namespace: keycloak
+type: Opaque
+stringData:
+  jdbc-url: "jdbc:postgresql://dbhost:5432/keycloak"
+  username: "..."
+  password: "..."
+
+
+
+
 ====================================================
 XXX. 
     - Add automatic Let's Encrypt certs?

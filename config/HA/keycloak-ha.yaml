@@ -1,25 +1,11 @@
-Keycloak HA in AKS — this will include:
-
-Namespace
-
-Secrets (DB credentials, TLS)
-
-PostgreSQL StatefulSet (optional, for demo only — in production use Azure DB for PostgreSQL)
-
-Keycloak Deployment with 3 replicas
-
-Service (ClusterIP + optional headless)
-
-Ingress with TLS
-
-🗂️ keycloak-ha.yaml
+## keycloak-ha.yaml
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: keycloak
 ---
-# 🔐 DB Secret
+# DB Secret
 apiVersion: v1
 kind: Secret
 metadata:
@@ -30,7 +16,7 @@ stringData:
   DB_USER: kcuser
   DB_PASSWORD: kcpassword
 ---
-# 🔐 TLS Secret (replace with your certs or use cert-manager)
+#  TLS Secret (replace with real certs or use cert-manager)
 apiVersion: v1
 kind: Secret
 metadata:
@@ -41,7 +27,7 @@ data:
   tls.crt: BASE64_ENCODED_CERT
   tls.key: BASE64_ENCODED_KEY
 ---
-# 🗄️ PostgreSQL (demo — replace with Azure Postgres in prod)
+# PostgreSQL (demo — replace with Azure Postgres in prod)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -100,7 +86,7 @@ spec:
   selector:
     app: keycloak-db
 ---
-# 🚀 Keycloak Deployment
+# Keycloak Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -158,7 +144,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 10
 ---
-# 🌐 Keycloak Service
+# Keycloak Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -172,7 +158,7 @@ spec:
   selector:
     app: keycloak
 ---
-# 🌍 Ingress
+# Ingress
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

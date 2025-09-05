@@ -2026,7 +2026,94 @@ stringData:
   username: "..."
   password: "..."
 
+====================================================
+====== MILTI AZ with Helms Charts ==================
+## 🔹 values-ha.yaml (override file)
+replicaCount: 5
 
+auth:
+  adminUser: admin
+  adminPassword: admin123
+
+proxy: edge
+httpRelativePath: /
+
+tls:
+  enabled: true
+  existingSecret: keycloak-tls
+
+cache:
+  enabled: true
+  stack: kubernetes
+
+service:
+  type: ClusterIP
+  ports:
+    http: 8080
+    https: 8443
+
+extraEnvVars:
+  - name: KC_CACHE
+    value: "ispn"
+  - name: KC_CACHE_STACK
+    value: "kubernetes"
+  - name: JAVA_OPTS_APPEND
+    value: "-Djgroups.dns.query=keycloak-headless.keycloak.svc.cluster.local"
+  - name: KC_HOSTNAME_STRICT
+    value: "false"
+
+persistence:
+  enabled: false
+
+externalDatabase:
+  host: dbhost
+  port: 5432
+  user: kcuser
+  password: kcpassword
+  database: keycloak
+
+podAntiAffinityPreset: hard
+podAffinityPreset: ""
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: keycloak
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hostname: keycloak.example.com
+  tls: true
+  extraTls:
+    - hosts:
+        - keycloak.example.com
+      secretName: keycloak-tls
+=====================================================
+
+## 🔹Deploy by Helm Chars:
+1. Add the Bitnami repo (if not added):
+>>  helm repo add bitnami https://charts.bitnami.com/bitnami
+>>  helm repo update
+2. Deploy Keycloak HA:
+>> helm install keycloak bitnami/keycloak -n keycloak --create-namespace -f values-ha.yaml
+3. Verify pods are spread across zones:
+>> kubectl get pods -n keycloak -o wide
 
 
 ====================================================

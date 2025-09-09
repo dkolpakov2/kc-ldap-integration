@@ -2625,6 +2625,105 @@ az network vnet subnet update \
   --name aks-subnet \
   --network-security-group aks-subnet-nsg
 
+##   Result:
+  - Your AKS worker nodes will now only allow DB traffic on 5432.
+  - Use Kubernetes NetworkPolicies inside the cluster for pod-to-pod restrictions.
+-----------------
+🔹 Example: NetworkPolicy for Keycloak → PostgreSQL only
+🔹 Explanation
+  - podSelector: applies to all Keycloak pods (app: keycloak).
+  - policyTypes: Egress → restricts what Keycloak can connect outbound.
+  - egress rule: allows connections only to pods with label app: postgres in namespace database on TCP 5432.
+  - ✅ Any other outbound traffic (e.g., Keycloak calling random services) will be blocked.
+
+>> yaml:
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-to-postgres
+  namespace: keycloak
+spec:
+  podSelector:
+    matchLabels:
+      app: keycloak
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+      namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+
+===================================================
+## run AKS in Azure, the Network Security Groups (NSGs) apply at the subnet or node level, not directly to containers.
+
+🔹 1. Identify Your AKS Cluster Subnet
+# Get AKS cluster resource group
+az aks show -n <aks-cluster-name> -g <resource-group> --query nodeResourceGroup -o tsv
+
+🔹 2. List NSGs Attached to Subnet / NICs
+# List NSGs applied to subnet
+az network vnet subnet show --ids <subnet-id> --query "networkSecurityGroup" -o table
+
+# List NSGs for all node NICs
+az network nic list --resource-group <aks-node-rg> --query "[].{name:name, nsg:networkSecurityGroup.id}" -o table
+
+🔹 3. View Rules in an NSG
+# List all rules in a given NSG -> will show priority, direction (Inbound/Egress), port, protocol, and allow/deny.
+az network nsg rule list --nsg-name <nsg-name> --resource-group <rg> -o table
+##
+🔹 4. Check Effective Rules on a Node NIC
+If you want to see what’s really applied (after defaults + custom rules):
+## This is the best way to debug connectivity (e.g. why Keycloak pod cannot reach Postgres on 5432).
+
+>> bash:
+  az network nic show-effective-nsg --name <nic-name> --resource-group <aks-node-rg> -o table
+===============
+## check if your AKS cluster nodes can reach Postgres on port 5432.
+🔹 1. Find an AKS Node NIC
+# Get the node resource group
+NODE_RG=$(az aks show -n <aks-cluster-name> -g <aks-rg> --query nodeResourceGroup -o tsv)
+
+# List NICs for your AKS nodes
+az network nic list -g $NODE_RG -o table
+1.2. Pick one NIC name from the list (e.g. aks-nodepool1-12345678-nic-0).
+🔹 2. Run IP Flow Verify to Check Port 5432
+az network watcher test-ip-flow \
+  --resource-group $NODE_RG \
+  --direction Outbound \
+  --local <aks-node-private-ip> \
+  --protocol TCP \
+  --local-port 5432 \
+  --remote <postgres-db-ip> \
+  --remote-port 5432 \
+  --nic <nic-name>
+----------------  
+🔹 3. Example
+az network watcher test-ip-flow \
+  -g MC_myAKSCluster_myResourceGroup_eastus \
+  --direction Outbound \
+  --local 10.240.0.4 \
+  --protocol TCP \
+  --local-port 5432 \
+  --remote 10.10.1.5 \
+  --remote-port 5432 \
+  --nic aks-nodepool1-12345678-nic-0
+
+✅ Output will say either:
+  "Allow" → traffic to Postgres is permitted
+  "Deny" → blocked by a specific NSG rule (you’ll see which one)
+------------------------
+### 🔹 5. Things to Remember
+  - Containers don’t get NSGs directly — they inherit from the node’s NIC/subnet NSG.
+  - If you’re using Azure CNI (not Kubenet), each pod gets an IP from the subnet → NSG applies.
+  - If your DB (Postgres) is external, make sure your egress NSG allows TCP 5432.
+  - If Postgres is in another subnet/VNet, check VNet peering rules + NSG on that subnet.  
 ===================================================
 
 XXX. 

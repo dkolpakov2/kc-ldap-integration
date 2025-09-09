@@ -2564,7 +2564,21 @@ Local (Docker) → pg_dump via Docker exec + keep compose files & certs in Git.
 👉 Do you want me to write a ready-to-use AKS CronJob + Docker script bundle so you can schedule backups in both environments with the same approach?
 
 ====================================================
+### Azure Network Security Groups (NSG) are used with AKS (Azure Kubernetes Service).
+🔑 Key points first:
+  - NSGs in Azure are applied at the subnet or NIC level in your AKS cluster’s Virtual Network (VNet).
+  - AKS worker nodes (VMs) live inside a subnet. You can attach an NSG to that subnet to filter inbound/outbound traffic.
+  - Pods themselves do not directly get NSGs. Instead, you control Pod-level networking with Kubernetes NetworkPolicies.
+  - example scenario:
+You want to allow only internal access to Keycloak in AKS, and block all external DB connections except port 5432 to PostgreSQL.
 
+1. Create an NSG
+>> bash: 
+az network nsg create \
+  --resource-group myResourceGroup \
+  --name aks-subnet-nsg \
+  --location eastus
+===================================================
 
 XXX. 
     - Add automatic Let's Encrypt certs?

@@ -41,7 +41,7 @@ In this solution, we take an Amazon Elastic Block Store (Amazon EBS) snapshot of
 4. Create an Amazon EKS node groups and map the snapshot to its data volume.
 >> Architecture
 DockerHUB ->ECR -> MultiArch Container Images-> EC2 (OS Volume, Data Volume) -> 2.
-                                        2. -> service Volume Snapshot-> EBS-> EKS Worker Node with  service
+  2. -> service Volume Snapshot-> EBS-> EKS Worker Node with  service
 ================
 Trace Events inside the Kubernetes POD:
 >> NO_PREFETCH_POD=$(kubectl get pod -l app=inflate-no-prefetch -o jsonpath="{.items[0].metadata.name}")
@@ -65,7 +65,7 @@ ingress-diagram
 >> docker-compose exec web sh
 >> docker-compose up --build
 >> docker-compose down   <- remove old containers Stop and clean up
-docker-compose up -d         # Start API and dependencies
+  docker-compose up -d         # Start API and dependencies
 # for local get into container interactive prompt:
 >> winpty docker exec -it Reporter sh
 >> winpty docker exec -ti -u root container_name bash    ## as root user
@@ -385,4 +385,17 @@ aws iam list-roles
 >>$ aws events put rule --name daily_task --schedule-expression 'cron(0 5 ? * MON-FRI *)'
 >>$ aws events list-rules
 
+========================================
+## Create Network Security Group:
+🔑 Key points first:
+    - NSGs in Azure are applied at the subnet or NIC level in your AKS cluster’s Virtual Network (VNet).
+    - AKS worker nodes (VMs) live inside a subnet. You can attach an NSG to that subnet to filter inbound/outbound traffic.
+    - Pods themselves do not directly get NSGs. Instead, you control Pod-level networking with Kubernetes NetworkPolicies.
+az network nsg create \
+  --resource-group myResourceGroup \
+  --name aks-subnet-nsg \
+  --location eastus
+
+
+=========================================
 

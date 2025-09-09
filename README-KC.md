@@ -2182,6 +2182,82 @@ spec:
                   key: password
       restartPolicy: Never
   backoffLimit: 1
+-------------------  
+---------- deployment keycloak with external DB ----------------------
+----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:24.0.3
+          args: ["start"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://my-external-postgres.example.com:5432/keycloakdb"
+            - name: KC_DB_USERNAME
+              value: "keycloakuser"
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgsql-db-secret
+                  key: password
+            - name: KC_HOSTNAME
+              value: "keycloak.mydomain.com"
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+-----
+--service ----------
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+
+
+### Secret (for DB password)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgsql-db-secret
+type: Opaque
+data:
+  password: <base64-encoded-password>
+----------------
+👉 Replace password with base64:
+>> bash:
+  echo -n 'mypassword' | base64
+
+
 
 ==================================================================
 HPA Integration:

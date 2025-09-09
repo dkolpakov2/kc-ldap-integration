@@ -2144,6 +2144,144 @@ stringData:
 ## Apply it:
   kubectl apply -f pgsql-db-secret.yaml
 
+==================================================================
+## Test DB Connect by using yaml below:
+1. kubectl apply -f postgres-connection-test.yaml
+2. kubectl logs job/postgres-connection-test
+-------------
+>> yaml: postgres-connection-test.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-connection-test
+spec:
+  template:
+    spec:
+      containers:
+        - name: psql
+          image: postgres:15
+          command: ["sh", "-c"]
+          args:
+            - >
+              echo "Testing connection to Postgres...";
+              PGPASSWORD=$POSTGRES_PASSWORD
+              psql -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT NOW();"
+          env:
+            - name: POSTGRES_HOST
+              value: "my-postgres.postgres.database.azure.com"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: "keycloakdb"
+            - name: POSTGRES_USER
+              value: "keycloakuser"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgsql-db-secret
+                  key: password
+      restartPolicy: Never
+  backoffLimit: 1
+
+==================================================================
+HPA Integration:
+## Key Considerations
+  1. Sticky Sessions: If Keycloak is behind an Ingress + Load Balancer, configure sticky sessions or Infinispan cache for session clustering.
+  2. External DB: Scaling Keycloak requires externalizing Postgres (don’t run DB inside same pod).
+  3. Infinispan / JDBC Cache: For real HA, configure Keycloak with Infinispan (replicated cache) or jdbc-ping discovery in AKS.
+  4. Multi-Zone: If AKS spans zones, make sure to run podAntiAffinity to spread Keycloak pods.
+
+### FOR HPA (Horizontal POD Autoscaler)
+
+
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+## validate:
+kubectl get apiservices | grep metrics
+
+### 2. Deployment with Resource Requests & Limits
+-- HPA works only if you define CPU/memory requests/limits.
+>> sample Keycloak Deployment snippet:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:25.0.0
+        args: ["start"]   # or start --optimized
+        env:
+          - name: KC_DB
+            value: postgres
+          - name: KC_DB_URL
+            value: jdbc:postgresql://postgres-svc:5432/keycloakdb
+          - name: KC_DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: pgsql-db-secret
+                key: username
+          - name: KC_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: pgsql-db-secret
+                key: password
+        ports:
+          - containerPort: 8080
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+
+============
+## 3. Create the HPA
+>> Example: scale between 2 and 5 pods if CPU > 70%.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: keycloak-hpa
+  namespace: keycloak
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: keycloak
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+##  Apply HPA:
+kubectl apply -f keycloak-hpa.yaml
+## Verify Scaling:
+kubectl get hpa -n keycloak
+
+## Test -> Force Load Test:
+kubectl run -i --tty load-generator --rm \
+  --image=busybox:1.28 \
+  -- /bin/sh -c "while true; do wget -q -O- http://keycloak:8080; done"
+## Validate PODS:
+kubectl get pods -n keycloak -w
+
 ====================================================
 XXX. 
     - Add automatic Let's Encrypt certs?

@@ -2578,6 +2578,53 @@ az network nsg create \
   --resource-group myResourceGroup \
   --name aks-subnet-nsg \
   --location eastus
+
+2. Add inbound rule (allow PostgreSQL 5432 from Keycloak subnet only)
+az network nsg rule create \
+  --resource-group myResourceGroup \
+  --nsg-name aks-subnet-nsg \
+  --name Allow-Postgres-From-AKS \
+  --priority 100 \
+  --access Allow \
+  --direction Inbound \
+  --protocol Tcp \
+  --source-address-prefixes 10.240.0.0/16 \
+  --source-port-ranges '*' \
+  --destination-port-ranges 5432
+
+
+💡 Replace 10.240.0.0/16 with your AKS subnet range.
+
+3. Block everything else inbound (deny rule)
+az network nsg rule create \
+  --resource-group myResourceGroup \
+  --nsg-name aks-subnet-nsg \
+  --name Deny-All-Inbound \
+  --priority 4096 \
+  --access Deny \
+  --direction Inbound \
+  --protocol '*' \
+  --source-address-prefixes '*' \
+  --destination-port-ranges '*'
+
+4. Associate NSG with AKS subnet
+
+First, find the subnet name:
+
+az network vnet subnet list \
+  --resource-group MC_myResourceGroup_myAKSCluster_eastus \
+  --vnet-name aks-vnet \
+  -o table
+
+
+Then attach NSG:
+
+az network vnet subnet update \
+  --resource-group MC_myResourceGroup_myAKSCluster_eastus \
+  --vnet-name aks-vnet \
+  --name aks-subnet \
+  --network-security-group aks-subnet-nsg
+
 ===================================================
 
 XXX. 

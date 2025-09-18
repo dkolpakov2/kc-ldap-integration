@@ -398,4 +398,5 @@ az network nsg create \
 
 
 =========================================
-
+## Scale up
+docker compose up -d --scale keycloak=3

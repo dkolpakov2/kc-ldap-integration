@@ -2916,9 +2916,41 @@ Keep secrets in Azure Key Vault and sync with Kubernetes via CSI driver for prod
   - produce Helm values + Kubernetes manifest snippets tailored to your real hostnames/IPs and AD paths, or
   - output a policy-as-code / Terraform snippet to wire VNet + NSG + AKS + Private Endpoint.
 
-
 ===================================================
-XXX. 
+5) Decode JWT in Postman (quick)
+  You can decode the access token in Postman Tests tab with a small script to show payload:
+
+// Paste this in the Tests tab after receiving a token response
+const body = pm.response.json();
+const token = body.access_token || body.id_token;
+if (token) {
+  const parts = token.split('.');
+  const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+  console.log("JWT payload:", payload);
+  pm.environment.set("kc_access_token", body.access_token);
+  pm.test("JWT contains realm and username", () => {
+    pm.expect(payload).to.have.property("preferred_username");
+  });
+}
+
+
+Or paste access_token into https://jwt.io
+ to inspect claims.
+-----------------
+6) Refresh token (Postman request)
+  To refresh:
+POST same token endpoint with:
+>>
+  grant_type=refresh_token
+  client_id=my-client
+  client_secret=<if confidential>
+  refresh_token=<refresh_token_from_response> 
+
+
+===================================================================
+
+XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
+
     - Add automatic Let's Encrypt certs?
     - Enable Kubernetes/AKS secret-based keystore loading?
 

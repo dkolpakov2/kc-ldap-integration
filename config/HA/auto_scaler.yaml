@@ -1,0 +1,45 @@
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jmeter-agent-{{ .Values.application.name }}
+  labels:
+    app: jmeter-agent-{{ .Values.application.name }}
+    # rev: jmeter-agent-{{ .Values.application.tag }}
+  namespace: {{ .Release.Namespace }} # Will be replaced from Spinnaker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jmeter-agent-{{ .Values.application.name }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+{{- if .Values.hpa.behavior }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.hpa.stabilizationWindowSeconds }}
+      policies:
+        - type: {{ .Values.hpa.type }}
+          value: {{ .Values.hpa.value90 }}
+          periodSeconds: {{ .Values.hpa.periodSeconds }}
+        - type: Pods
+          value: {{ .Values.hpa.value1 }}
+          periodSeconds: {{ .Values.hpa.periodSeconds }}
+      selectPolicy: {{ .Values.hpa.selectPolicyMin }}
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.hpa.stabilizationWindowSeconds }}
+      policies:
+        - type: {{ .Values.hpa.type }}
+          value: {{ .Values.hpa.value100 }}
+          periodSeconds: {{ .Values.hpa.periodSeconds }}
+        - type: Pods
+          value: {{ .Values.hpa.maxReplicas }}
+          periodSeconds: {{ .Values.hpa.periodSeconds }}
+      selectPolicy: {{ .Values.hpa.selectPolicyMax }}
+{{- end }}

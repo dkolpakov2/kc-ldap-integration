@@ -400,3 +400,15 @@ az network nsg create \
 =========================================
 ## Scale up
 docker compose up -d --scale keycloak=3
+
+=========================================
+## HELM:
+ helm lint --with-subchats --strict
+ helm unittest --update-golden
+
+Run this to render your chart and make sure it’s valid Kubernetes YAML:
+
+helm template ./mychart -f values.yaml > rendered.yaml
+kubectl apply --dry-run=client -f rendered.yaml
+
+========================================= 

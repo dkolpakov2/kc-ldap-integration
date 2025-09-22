@@ -77,3 +77,30 @@ ingress:
     - hosts:
         - keycloak.example.com
       secretName: keycloak-tls
+### Auto-scaler  params
+application:
+  name: my-app
+  tag: v1.0.0
+
+hpa:
+  # General HPA config
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75   # scale when avg CPU > 75%
+
+  # Behavior (scale up/down)
+  stabilizationWindowSeconds: 60
+
+  # Scaling policy type: "Pods" or "Percent"
+  type: Percent
+
+  # Scale down policies
+  value90: 90     # scale down by 90% (if type=Percent)
+  value1: 1       # scale down by 1 pod (if type=Pods)
+  periodSeconds: 15
+  selectPolicyMin: Min   # Min | Max | Disabled
+
+  # Scale up policies
+  value100: 100   # scale up by 100% (if type=Percent)
+  selectPolicyMax: Max   # Min | Max | Disabled
+

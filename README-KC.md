@@ -2947,7 +2947,40 @@ POST same token endpoint with:
   refresh_token=<refresh_token_from_response> 
 
 
+=================================
+HPA =============================
+=================================
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
 ===================================================================
+Script:
+#!/bin/bash
+# URL to hit
+URL="http://localhost:8080/health"
+# Number of times to run
+COUNT=1000
+for ((i=1; i<=COUNT; i++))
+do
+  echo "[$i] Running curl..."
+  curl -s -o /dev/null -w "Status: %{http_code}\n" "$URL"
+done
+
+
 
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 

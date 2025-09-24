@@ -2980,6 +2980,113 @@ do
   curl -s -o /dev/null -w "Status: %{http_code}\n" "$URL"
 done
 
+=============================================
+Remove Authentication Direct Grand Flow:
+🔎 Steps in Keycloak Admin Console
+ - Login to the Keycloak Admin Console.
+ - Navigate to:
+    Authentication → Flows
+ - Check if the flow you want to delete is set as the default binding:
+ - Go to Authentication → Bindings.
+ - Look at Direct Grant Flow, Browser Flow, etc.
+ - If your custom flow is selected there, change it back to the built-in direct grant (or another valid flow).
+ - Also check if any client is explicitly using that flow:
+  - Go to Clients → <your client> → Authentication Flow Overrides.
+  - Ensure your flow is not set there. If it is, unset or change it.
+  - Once the flow is not referenced anywhere, go back to
+Authentication → Flows, select your flow, and click Delete.
+## #############
+## 🛠 CLI (kcadm.sh) method
+  
+# Login as admin
+kcadm.sh config credentials --server http://localhost:8080/auth \
+  --realm master --user admin --password <password>
+
+# List flows
+kcadm.sh get authentication/flows -r <realm>
+
+# If flow is bound, reset binding first
+kcadm.sh update realms/<realm> -s "directGrantFlow=direct grant"
+
+# Delete your custom flow by id or alias
+kcadm.sh delete authentication/flows/<flow-id> -r <realm>
+===========
+
+✅ Rule of thumb:
+  You can’t delete an authentication flow if:
+  It is the default binding for Browser/Direct Grant/Reset Credentials.
+  It is set on a client override.
+  Once detached, deletion works.
+
+## safe cleanup script using Keycloak’s kcadm.sh CLI that:
+  Logs into Keycloak
+  Detects if the target flow is bound to Direct Grant, Browser, or Reset Credentials
+  Resets those bindings back to defaults
+  Checks client overrides and resets them if needed
+  Deletes the flow safely
+-----------
+
+# Usage: ./delete-flow.sh <realm> "<flow-alias>"
+>> BASH:
+#!/bin/bash
+
+REALM=$1
+FLOW_ALIAS=$2
+
+if [[ -z "$REALM" || -z "$FLOW_ALIAS" ]]; then
+  echo "Usage: $0 <realm> \"<flow-alias>\""
+  exit 1
+fi
+
+# Path to kcadm.sh (adjust if needed)
+KC_BIN=/opt/keycloak/bin/kcadm.sh
+
+# Login as Keycloak admin (adjust user/pass/server/realm)
+$KC_BIN config credentials --server http://localhost:8080 \
+  --realm master --user admin --password 'admin'
+
+echo "🔎 Checking flows in realm '$REALM'..."
+FLOW_ID=$($KC_BIN get authentication/flows -r $REALM | jq -r ".[] | select(.alias==\"$FLOW_ALIAS\") | .id")
+
+if [[ -z "$FLOW_ID" ]]; then
+  echo "❌ Flow '$FLOW_ALIAS' not found in realm '$REALM'."
+  exit 1
+fi
+
+echo "✅ Found flow '$FLOW_ALIAS' with id: $FLOW_ID"
+
+# Step 1: Reset realm bindings if this flow is in use
+echo "🔎 Checking realm authentication bindings..."
+REALM_CFG=$($KC_BIN get realms/$REALM)
+
+for BINDING in browserFlow directGrantFlow resetCredentialsFlow; do
+  CUR_FLOW=$(echo "$REALM_CFG" | jq -r ".$BINDING")
+  if [[ "$CUR_FLOW" == "$FLOW_ALIAS" ]]; then
+    echo "⚠️ Flow '$FLOW_ALIAS' is set as $BINDING. Resetting to default..."
+    $KC_BIN update realms/$REALM -s "$BINDING=direct grant"
+  fi
+done
+
+# Step 2: Check client overrides
+echo "🔎 Checking clients using flow overrides..."
+CLIENTS=$($KC_BIN get clients -r $REALM)
+for CID in $(echo "$CLIENTS" | jq -r '.[].id'); do
+  CLIENT=$($KC_BIN get clients/$CID -r $REALM)
+  OVERRIDE=$(echo "$CLIENT" | jq -r '.authenticationFlowBindingOverrides | .direct_grant')
+  if [[ "$OVERRIDE" == "$FLOW_ALIAS" ]]; then
+    echo "⚠️ Client $(echo $CLIENT | jq -r .clientId) overrides direct grant with '$FLOW_ALIAS'. Resetting..."
+    $KC_BIN update clients/$CID -r $REALM -s 'authenticationFlowBindingOverrides.direct_grant=direct grant'
+  fi
+done
+
+# Step 3: Delete the flow
+echo "🗑 Deleting flow '$FLOW_ALIAS'..."
+$KC_BIN delete authentication/flows/$FLOW_ID -r $REALM
+
+echo "✅ Flow '$FLOW_ALIAS' deleted successfully!"
+
+
+===========================================================
 
 
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX

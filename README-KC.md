@@ -3045,15 +3045,15 @@ KC_BIN=/opt/keycloak/bin/kcadm.sh
 $KC_BIN config credentials --server http://localhost:8080 \
   --realm master --user admin --password 'admin'
 
-echo "🔎 Checking flows in realm '$REALM'..."
+echo " Checking flows in realm '$REALM'..."
 FLOW_ID=$($KC_BIN get authentication/flows -r $REALM | jq -r ".[] | select(.alias==\"$FLOW_ALIAS\") | .id")
 
 if [[ -z "$FLOW_ID" ]]; then
-  echo "❌ Flow '$FLOW_ALIAS' not found in realm '$REALM'."
+  echo " Flow '$FLOW_ALIAS' not found in realm '$REALM'."
   exit 1
 fi
 
-echo "✅ Found flow '$FLOW_ALIAS' with id: $FLOW_ID"
+echo " Found flow '$FLOW_ALIAS' with id: $FLOW_ID"
 
 # Step 1: Reset realm bindings if this flow is in use
 echo "🔎 Checking realm authentication bindings..."
@@ -3062,7 +3062,7 @@ REALM_CFG=$($KC_BIN get realms/$REALM)
 for BINDING in browserFlow directGrantFlow resetCredentialsFlow; do
   CUR_FLOW=$(echo "$REALM_CFG" | jq -r ".$BINDING")
   if [[ "$CUR_FLOW" == "$FLOW_ALIAS" ]]; then
-    echo "⚠️ Flow '$FLOW_ALIAS' is set as $BINDING. Resetting to default..."
+    echo " Flow '$FLOW_ALIAS' is set as $BINDING. Resetting to default..."
     $KC_BIN update realms/$REALM -s "$BINDING=direct grant"
   fi
 done
@@ -3087,6 +3087,33 @@ echo "✅ Flow '$FLOW_ALIAS' deleted successfully!"
 
 
 ===========================================================
+## LOAD TEST
+## use: templates/keycloak-load-cronjob.yaml
+## use: tempalte/values.yaml
+
+📌 Deploy the load job
+>> bash:
+helm upgrade --install keycloak-load ./mychart -f values.yaml
+## >> This will schedule a job every 2 minutes that hits Keycloak with requests load in concurrent batches.
+
+## 2 Option Use kubectl run with a loop of curl
+>>   This will continuously hit Keycloak until you stop it (Ctrl+C).
+>> 
+kubectl run keycloak-load --rm -it --image=busybox --restart=Never -- \
+  sh -c "while true; do 
+    wget -q -O- http://keycloak-service:8080/auth/realms/master; 
+  done"
+
+
+
+## 2. option
+5. 🧩 Kubernetes-native stress with stress-ng
+   run stress-ng inside a pod targeting CPU:
+   This doesn’t hit Keycloak directly, but if you run it inside the Keycloak pod (e.g., kubectl exec) it will spike CPU artificially so HPA triggers scaling.
+
+>> 
+kubectl run stress --rm -it --image=alpine/stress-ng -- \
+  stress-ng --cpu 4 --io 2 --vm 2 --timeout 300s
 
 
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX

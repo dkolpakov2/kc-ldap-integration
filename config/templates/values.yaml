@@ -1,0 +1,5 @@
+load:
+  url: "http://keycloak-service:8080/auth/realms/master"  # Change to your ingress or service URL
+  requests: 10000     # total requests per run
+  concurrent: 50      # parallel requests
+  schedule: "*/2 * * * *"  # every 2 minutes (cron expression)

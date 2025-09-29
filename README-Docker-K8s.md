@@ -411,4 +411,8 @@ Run this to render your chart and make sure it’s valid Kubernetes YAML:
 helm template ./mychart -f values.yaml > rendered.yaml
 kubectl apply --dry-run=client -f rendered.yaml
 
+👉 To confirm it’s rendering correctly before deploying, run:
+>>
+
+helm install --generate-name ./mychart -f values.yaml --dry-run --debug | less
 ========================================= 

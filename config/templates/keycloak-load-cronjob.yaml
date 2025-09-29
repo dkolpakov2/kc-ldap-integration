@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keycloak-load-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: keycloak-load
+spec:
+  schedule: "{{ .Values.load.schedule }}"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: keycloak-load
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: keycloak-load
+              image: curlimages/curl:8.7.1
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  echo "Starting load test against Keycloak...";
+                  for i in $(seq 1 {{ .Values.load.requests }}); do
+                    curl -s {{ .Values.load.url }} > /dev/null &
+                    if [ $((i % {{ .Values.load.concurrent }})) -eq 0 ]; then
+                      wait
+                    fi
+                  done
+                  wait
+                  echo "Load test completed."

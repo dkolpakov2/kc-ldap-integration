@@ -69,6 +69,9 @@ while IFS=, read -r name id; do
 done < realms.csv
 echo "Realm ID: $REALM_ID"
 
+## Update parentId for ldap-provider-dev.json
+sed -i "s/\"parentId\": *\"changeme\"/\"parentId\": \"$REALM_ID\"/" ldap-provider.json
+
 
 
 if [ -z "$REALM_ID" ]; then

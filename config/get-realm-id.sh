@@ -38,6 +38,26 @@ REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p"
 REALM_ID=$(printf '%s\n' "$CLEANED" |
   sed -n "/\"id\":/{N;/\"realm\": *\"$ESCAPED_REALM\"/s/.*\"id\": *\"\([^\"]*\)\".*/\1/p}"
 )
+# if CLEANED like below:
+{
+  "id": "12345-abcde",
+  "realm": "kafka-dev"
+}
+## USe this:
+REALM_NAME="kafka-dev"
+ESCAPED_REALM=$(printf '%s\n' "$REALM_NAME" | sed 's/[][\.^$*\/]/\\&/g')
+
+REALM_ID=$(printf '%s\n' "$CLEANED" |
+  sed -n "/\"realm\": *\"$ESCAPED_REALM\"/{N; s/.*\"id\": *\"\([^\"]*\)\".*/\1/p}"
+)
+echo "Realm ID: $REALM_ID"
+## 
+REALM_NAME="kafka-usb-dev"
+CLEANED='[{"id":"123456005","realm":"master"},{"id":"0987656001","realm":"kafka-usb-dev"}]'
+
+REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "s/.*\"id\":\"\([^\"]*\)\"[^{]*\"realm\":\"$REALM_NAME\".*/\1/p")
+
+echo "Realm ID: $REALM_ID"
 
 ## 3 Version with bash script only:
 REALM_ID=""

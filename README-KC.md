@@ -3118,7 +3118,189 @@ kubectl run keycloak-load --rm -it --image=busybox --restart=Never -- \
 kubectl run stress --rm -it --image=alpine/stress-ng -- \
   stress-ng --cpu 4 --io 2 --vm 2 --timeout 300s
 
+=========================================================================
+Direct Access Grant Authorization in Keycloak
 
+>>Client sends:
+  POST /realms/<realm>/protocol/openid-connect/token
+  grant_type=password
+  client_id=my-client
+  username=user1
+  password=secret
+-------------------------
+🔐 Direct Access Grant with Certificate (Mutual TLS)
+ -  If you want to use client certificates for authentication (mTLS), 
+    Keycloak supports this via Client Authentication → X.509 certificates.
+- This lets Keycloak validate the client identity using the presented certificate instead of a shared secret.
+
+🧩 Steps to Create Direct Access Grant Client with Certificate via Bash
+    Below is a pure bash script using kcadm.sh (Keycloak’s admin CLI).
+🧱 Requirements:
+  - You must be logged in to the admin CLI (kcadm.sh config credentials ...)
+  - You already have your .crt and .key files ready for the client
+
+
+## Step 1: Create the client
+REALM="kafka-dev"
+CLIENT_ID="my-direct-client"
+
+# 1. Create client with Direct Access Grants enabled
+/opt/keycloak/bin/kcadm.sh create clients -r "$REALM" \
+  -s clientId="$CLIENT_ID" \
+  -s publicClient=false \
+  -s 'directAccessGrantsEnabled=true' \
+  -s 'serviceAccountsEnabled=true' \
+  -s 'standardFlowEnabled=false' \
+  -s 'protocol=openid-connect'
+
+# 2. Step 2: Enable Certificate-based Authentication (mTLS)
+  Keycloak expects the client certificate to be uploaded as an attribute or credential.
+  You can link a certificate by setting the client’s X.509 attribute:
+>> bash:
+CLIENT_UUID=$(/opt/keycloak/bin/kcadm.sh get clients -r "$REALM" --query clientId=$CLIENT_ID --fields id --format csv | head -1 | cut -d',' -f1)
+
+CERT_CONTENT=$(cat /path/to/client.crt | sed ':a;N;$!ba;s/\n/\\n/g')
+
+/opt/keycloak/bin/kcadm.sh update clients/$CLIENT_UUID -r "$REALM" \
+  -s 'attributes."x509.subjectdn"="CN=my-direct-client,O=MyOrg"' \
+  -s 'attributes."tls.client.certificate"="'"$CERT_CONTENT"'"'
+
+# 3. Step 3: Optionally Require Client Certificate Authentication
+  This enforces certificate validation when this client requests tokens:
+/opt/keycloak/bin/kcadm.sh update clients/$CLIENT_UUID -r "$REALM" \
+  -s 'authenticationFlowBindingOverrides.directGrant="browser-flow-mtls"'
+## Or create a custom authentication flow bound to mutual TLS login.
+
+# 4. Step 4: Test the Direct Access Grant (Password or mTLS)
+# 4.1. Password grant
+curl -k -X POST "https://keycloak.example.com/realms/$REALM/protocol/openid-connect/token" \
+  -d "client_id=$CLIENT_ID" \
+  -d "grant_type=password" \
+  -d "username=user1" \
+  -d "password=secret"
+# 4.2. mTLS grant:
+curl -k --cert /path/to/client.crt --key /path/to/client.key \
+  -X POST "https://keycloak.example.com/realms/$REALM/protocol/openid-connect/token" \
+  -d "client_id=$CLIENT_ID" \
+  -d "grant_type=client_credentials"
+=================================================
+### self-contained, dependency-free bash script that:
+  - Creates a realm (if missing)
+  - Creates a client with Direct Access Grants enabled
+  - Configures mTLS (client certificate) attributes
+  - Retrieves the client UUID
+  - Tests the token endpoint using password or certificate
+  - 👉 No jq or awk used — only sed, cut, and grep.
+
+bash: create-direct-client-mtls.sh
+
+#!/bin/bash
+# ============================================
+# Keycloak Direct Access Grant + mTLS Setup
+# Compatible with bash only (no jq/awk)
+# ============================================
+
+KEYCLOAK_BIN="/opt/keycloak/bin/kcadm.sh"
+KC_URL="https://keycloak.example.com"
+REALM="kafka-ubs-dev"
+CLIENT_ID="direct-client-mtls"
+USERNAME="user1"
+PASSWORD="userpass"
+CRT_PATH="/path/to/client.crt"
+KEY_PATH="/path/to/client.key"
+
+# --------------------------------------------
+# 1️⃣ Login as admin (update credentials below)
+# --------------------------------------------
+$KEYCLOAK_BIN config credentials --server "$KC_URL" --realm master --user admin --password 'admin_password'
+
+# --------------------------------------------
+# 2️⃣ Ensure Realm Exists (create if missing)
+# --------------------------------------------
+echo " Checking if realm '$REALM' exists..."
+REALM_CHECK=$($KEYCLOAK_BIN get realms --fields realm | grep "\"realm\":\"$REALM\"" || true)
+
+if [ -z "$REALM_CHECK" ]; then
+  echo " Creating realm '$REALM'..."
+  $KEYCLOAK_BIN create realms -s realm="$REALM" -s enabled=true
+else
+  echo " Realm '$REALM' already exists."
+fi
+
+# --------------------------------------------
+# 3️⃣ Create Direct Access Client
+# --------------------------------------------
+echo " Creating client '$CLIENT_ID'..."
+$KEYCLOAK_BIN create clients -r "$REALM" \
+  -s clientId="$CLIENT_ID" \
+  -s protocol=openid-connect \
+  -s publicClient=false \
+  -s directAccessGrantsEnabled=true \
+  -s serviceAccountsEnabled=true \
+  -s standardFlowEnabled=false \
+  -s 'redirectUris=["*"]'
+
+# --------------------------------------------
+# 4️⃣ Get Client UUID (without jq)
+# --------------------------------------------
+echo " Getting client UUID..."
+CLIENTS_JSON=$($KEYCLOAK_BIN get clients -r "$REALM" --fields id,clientId)
+# Extract line containing the client
+CLIENT_LINE=$(echo "$CLIENTS_JSON" | sed -n "/\"clientId\":\"$CLIENT_ID\"/p")
+# Extract the ID value between quotes after "id":
+CLIENT_UUID=$(echo "$CLIENT_LINE" | sed 's/.*"id":"\([^"]*\)".*/\1/')
+
+if [ -z "$CLIENT_UUID" ]; then
+  echo " Failed to extract CLIENT_UUID. Aborting."
+  exit 1
+fi
+
+echo " CLIENT_UUID = $CLIENT_UUID"
+
+# --------------------------------------------
+# 5️⃣ Encode certificate content
+# --------------------------------------------
+if [ ! -f "$CRT_PATH" ]; then
+  echo " Certificate file not found at $CRT_PATH"
+  exit 1
+fi
+
+CERT_CONTENT=$(sed ':a;N;$!ba;s/\n/\\n/g' "$CRT_PATH")
+
+# --------------------------------------------
+# 6. Attach Certificate Attributes
+# --------------------------------------------
+echo " Updating client with certificate attributes..."
+$KEYCLOAK_BIN update clients/$CLIENT_UUID -r "$REALM" \
+  -s 'attributes."x509.subjectdn"="CN='$CLIENT_ID',O=MyOrg"' \
+  -s 'attributes."tls.client.certificate"="'"$CERT_CONTENT"'"'
+
+echo " Certificate attributes added to client."
+
+# --------------------------------------------
+# 7️⃣ Test Direct Access Grant via Password
+# --------------------------------------------
+echo " Testing password-based direct grant..."
+curl -k -s -X POST "$KC_URL/realms/$REALM/protocol/openid-connect/token" \
+  -d "grant_type=password" \
+  -d "client_id=$CLIENT_ID" \
+  -d "username=$USERNAME" \
+  -d "password=$PASSWORD" | sed 's/{/\n{/g'
+
+# --------------------------------------------
+# 8️⃣ (Optional) Test Client Certificate Grant
+# --------------------------------------------
+echo "🧪 Testing mTLS client credentials..."
+curl -k --cert "$CRT_PATH" --key "$KEY_PATH" \
+  -X POST "$KC_URL/realms/$REALM/protocol/openid-connect/token" \
+  -d "grant_type=client_credentials" \
+  -d "client_id=$CLIENT_ID" | sed 's/{/\n{/g'
+
+echo "✅ Done."
+
+
+
+=========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 
     - Add automatic Let's Encrypt certs?

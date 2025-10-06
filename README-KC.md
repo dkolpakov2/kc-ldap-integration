@@ -3192,7 +3192,11 @@ curl -k --cert /path/to/client.crt --key /path/to/client.key \
   - Tests the token endpoint using password or certificate
   - 👉 No jq or awk used — only sed, cut, and grep.
 
-bash: create-direct-client-mtls.sh
+
+## bash: create-direct-client-mtls.sh
+>> run:
+  chmod +x create-direct-client-mtls.sh
+  ./create-direct-client-mtls.sh
 
 #!/bin/bash
 # ============================================
@@ -3297,7 +3301,16 @@ curl -k --cert "$CRT_PATH" --key "$KEY_PATH" \
   -d "client_id=$CLIENT_ID" | sed 's/{/\n{/g'
 
 echo "✅ Done."
+========================================================================
+## Create-kafka-direct-grant.sh
+This script will:
 
+✅ Create (or verify) a realm
+✅ Create the Kafka-direct-grant client with Direct Access Grants + mTLS
+✅ Attach the bank certificate attributes
+✅ Test the token retrieval via both password and client certificate grant
+
+No jq or awk dependencies — only sed, grep, and standard bash tools.
 
 
 =========================================================================

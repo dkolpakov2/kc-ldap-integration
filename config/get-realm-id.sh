@@ -20,10 +20,28 @@ REALMS_JSON=$(/opt/keycloak/bin/kcadm.sh get realms --fields id,realm)
 # Extract the line with our realm
 # Remove spaces and quotes for easier parsing
 CLEANED=$(echo "$REALMS_JSON" | tr -d ' ' | tr -d '"' )
+CLEANED=$(echo "$CLEANED" | tr -d '\r' | tr -d ' ')
+
+#This makes sure hyphens (-) and dots (.) are treated literally.
+ESCAPED_REALM=$(printf '%s\n' "$REALM_NAME" | sed 's/[][\.^$*\/]/\\&/g')
+REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "/$ESCAPED_REALM/p" | cut -d',' -f2)
 
 # Find matching realm block and extract id
 # Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]
 REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p")
+
+
+## 3 Version with bash script only:
+REALM_ID=""
+while IFS=, read -r name id; do
+  if [ "$name" = "$REALM_NAME" ]; then
+    REALM_ID="$id"
+    break
+  fi
+done < realms.csv
+echo "Realm ID: $REALM_ID"
+
+
 
 if [ -z "$REALM_ID" ]; then
   echo "❌ Realm '$REALM_NAME' not found."

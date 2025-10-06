@@ -94,3 +94,30 @@ if [ -z "$REALM_ID" ]; then
 else
   echo "✅ Realm '$REALM_NAME' ID: $REALM_ID"
 fi
+
+
+## Inject LDAP-ID
+# 1️⃣ Get component list as JSON
+RAW=$(/opt/keycloak/bin/kcadm.sh get components -r "$REALM" --fields name,id)
+
+# 2️⃣ Clean and normalize output (remove newlines/spaces)
+CLEANED=$(echo "$RAW" | tr -d '\n' | tr -d '[:space:]')
+
+# Example cleaned output:
+# [{"id":"abc-123","name":"ldap-provider-dev"},{"id":"xyz-999","name":"other"}]
+
+# 3️⃣ Extract ID for ldap-provider-dev using sed
+LDAP_PROVIDER_ID=$(echo "$CLEANED" | sed -n "s/.*{\"id\":\"\([^\"]*\)\",\"name\":\"$COMPONENT_NAME\".*/\1/p")
+
+# 4️⃣ Validate extraction
+if [ -z "$LDAP_PROVIDER_ID" ]; then
+  echo "❌ Could not find LDAP provider ID for '$COMPONENT_NAME' in realm '$REALM'"
+  exit 1
+fi
+
+echo "✅ Found LDAP_PROVIDER_ID=$LDAP_PROVIDER_ID"
+
+# 5️⃣ Inject into JSON file
+sed -i "s/\"parentId\": *\"changeme\"/\"parentId\": \"$LDAP_PROVIDER_ID\"/" "$JSON_FILE"
+
+echo "✅ Updated $JSON_FILE with parentId=$LDAP_PROVIDER_ID"

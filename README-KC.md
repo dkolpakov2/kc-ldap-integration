@@ -3085,6 +3085,9 @@ $KC_BIN delete authentication/flows/$FLOW_ID -r $REALM
 
 echo "✅ Flow '$FLOW_ALIAS' deleted successfully!"
 
+## Delete REALM:
+chmod +x delete-realm.sh
+./delete-realm.sh
 
 ===========================================================
 ## LOAD TEST

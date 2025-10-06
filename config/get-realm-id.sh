@@ -34,6 +34,10 @@ REALM_ID=$(printf '%s\n' "$CLEANED" |
 # Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]
 REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p")
 
+#if If "id" comes before "realm", swap search order:
+REALM_ID=$(printf '%s\n' "$CLEANED" |
+  sed -n "/\"id\":/{N;/\"realm\": *\"$ESCAPED_REALM\"/s/.*\"id\": *\"\([^\"]*\)\".*/\1/p}"
+)
 
 ## 3 Version with bash script only:
 REALM_ID=""

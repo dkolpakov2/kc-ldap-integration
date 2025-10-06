@@ -25,6 +25,10 @@ CLEANED=$(echo "$CLEANED" | tr -d '\r' | tr -d ' ')
 #This makes sure hyphens (-) and dots (.) are treated literally.
 ESCAPED_REALM=$(printf '%s\n' "$REALM_NAME" | sed 's/[][\.^$*\/]/\\&/g')
 REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "/$ESCAPED_REALM/p" | cut -d',' -f2)
+# OR if JSON cleaned
+REALM_ID=$(printf '%s\n' "$CLEANED" |
+  sed -n "/\"realm\": *\"$ESCAPED_REALM\"/{N; s/.*\"id\": *\"\([^\"]*\)\".*/\1/p}"
+)
 
 # Find matching realm block and extract id
 # Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]

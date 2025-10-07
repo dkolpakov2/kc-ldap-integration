@@ -65,6 +65,21 @@ FLOW_FILE="flow-list.json"
 FLOW_ID=$(sed -n "s/.*\"id\":\"\([^\"]*\)\".*\"alias\":\"[[:space:]]*$FLOW_ALIAS[[:space:]]*\".*/\1/p" "$FLOW_FILE")
 # Normalize JSON: remove spaces and newlines
 CLEANED=$(tr -d '\n\r' < "$FLOW_FILE" | sed 's/[[:space:]]//g')
+
+# last try to clean
+# Combine multiline JSON into a single line (sed and tr safe)
+CLEANED=$(tr -d '\n\r' < "$FLOW_FILE" | tr -d ' ')
+
+# Optional: show available aliases
+echo "[DEBUG] Available aliases:"
+echo "$CLEANED" | sed 's/.*"alias":"\([^"]*\)".*/\1\n/g'
+
+# Escape alias for regex
+ESCAPED_ALIAS=$(printf '%s\n' "$FLOW_ALIAS" | sed 's/[]\/$*.^[]/\\&/g')
+
+# Match id value preceding the alias
+FLOW_ID=$(echo "$CLEANED" | sed -n "s/.*{\"id\":\"\([^\"]*\)\",\"alias\":\"$ESCAPED_ALIAS\".*/\1/p")
+
 # Debug: check alias presence
 if ! echo "$CLEANED" | grep -q "\"alias\":\"$FLOW_ALIAS\""; then
   echo "[ERROR] Alias '$FLOW_ALIAS' not found. Available aliases:"

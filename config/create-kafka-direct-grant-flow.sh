@@ -71,6 +71,28 @@ if [ -z "$FLOW_ID" ]; then
   exit 1
 fi
 
+# Try both forms for realm flag
+echo "[INFO] Fetching flows for realm: $REALM"
+if ! $KCADM get authentication/flows -r "$REALM" > "$FLOW_FILE" 2>/dev/null; then
+  echo "[WARN] '-r' flag failed; trying '--target-realm'"
+  $KCADM get authentication/flows --target-realm "$REALM" > "$FLOW_FILE"
+fi
+
+# Show first few lines
+echo "[DEBUG] First few lines of $FLOW_FILE:"
+head -n 5 "$FLOW_FILE" || echo "[WARN] file empty"
+
+# Extract alias and id pairs for debugging
+if grep -q '"alias"' "$FLOW_FILE"; then
+  echo "[INFO] Found aliases:"
+  grep -o '"alias":"[^"]*"' "$FLOW_FILE"
+else
+  echo "[ERROR] No aliases found — verify your KCADM command or login session."
+  exit 1
+fi
+
+# Now extract ID
+FLOW_ID=$(sed -n "s/.*\"id\":\"\([^\"]*\)\".*\"alias\":\"$FLOW_ALIAS\".*/\1/p" "$FLOW_FILE")
 if [ -z "$FLOW_ID" ]; then
   echo " Could not find flow ID for '$FLOW_ALIAS'."
   exit 1

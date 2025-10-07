@@ -52,6 +52,7 @@ $KEYCLOAK_BIN create authentication/flows -r "$REALM" \
 # -----------------------------
 echo " Getting flow ID for '$FLOW_ALIAS'..."
 FLOW_LIST=$($KEYCLOAK_BIN get authentication/flows -r "$REALM")
+
 FLOW_ID=$(echo "$FLOW_LIST" | sed -n "/\"alias\":\"$FLOW_ALIAS\"/s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
 # output:
 # FLOW_LIST=[{"id":""12345","alias":"kafak-direct-grant","description":"something","providerId":"basic-flow", "topLevel":true, "builtIn":false, "authenticationExecutions":[]}]
@@ -62,6 +63,19 @@ FLOW_FILE="flow-list.json"
 
 # Extract the ID by matching alias ignoring accidental typos/spaces
 FLOW_ID=$(sed -n "s/.*\"id\":\"\([^\"]*\)\".*\"alias\":\"[[:space:]]*$FLOW_ALIAS[[:space:]]*\".*/\1/p" "$FLOW_FILE")
+# Normalize JSON: remove spaces and newlines
+CLEANED=$(tr -d '\n\r' < "$FLOW_FILE" | sed 's/[[:space:]]//g')
+# Debug: check alias presence
+if ! echo "$CLEANED" | grep -q "\"alias\":\"$FLOW_ALIAS\""; then
+  echo "[ERROR] Alias '$FLOW_ALIAS' not found. Available aliases:"
+  echo "$CLEANED" | sed 's/.*"alias":"\([^"]*\)".*/\1\n/g'
+  exit 1
+fi
+
+# Extract ID before alias
+FLOW_ID=$(echo "$CLEANED" | sed -n "s/.*\"id\":\"\([^\"]*\)\"[^}]*\"alias\":\"$FLOW_ALIAS\".*/\1/p")
+
+
 
 # Fallback if not found (show what's actually in the file)
 if [ -z "$FLOW_ID" ]; then

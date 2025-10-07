@@ -78,7 +78,7 @@ CERT_CONTENT=$(sed ':a;N;$!ba;s/\n/\\n/g' "$BANK_CERT_PATH")
 # -----------------------------
 # 6️⃣ Attach mTLS Attributes
 # -----------------------------
-echo "🔗 Attaching mTLS (bank certificate) attributes..."
+echo " Attaching mTLS (bank certificate) attributes..."
 $KEYCLOAK_BIN update clients/$CLIENT_UUID -r "$REALM" \
   -s 'attributes."tls.client.certificate"="'"$CERT_CONTENT"'"' \
   -s 'attributes."x509.subjectdn"="CN=Kafka-direct-grant,O=Bank"' \

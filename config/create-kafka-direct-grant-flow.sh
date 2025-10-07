@@ -53,6 +53,23 @@ $KEYCLOAK_BIN create authentication/flows -r "$REALM" \
 echo " Getting flow ID for '$FLOW_ALIAS'..."
 FLOW_LIST=$($KEYCLOAK_BIN get authentication/flows -r "$REALM")
 FLOW_ID=$(echo "$FLOW_LIST" | sed -n "/\"alias\":\"$FLOW_ALIAS\"/s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
+# output:
+# FLOW_LIST=[{"id":""12345","alias":"kafak-direct-grant","description":"something","providerId":"basic-flow", "topLevel":true, "builtIn":false, "authenticationExecutions":[]}]
+
+# Debug output
+echo "[DEBUG] Looking for flow alias: $FLOW_ALIAS"
+FLOW_FILE="flow-list.json"
+
+# Extract the ID by matching alias ignoring accidental typos/spaces
+FLOW_ID=$(sed -n "s/.*\"id\":\"\([^\"]*\)\".*\"alias\":\"[[:space:]]*$FLOW_ALIAS[[:space:]]*\".*/\1/p" "$FLOW_FILE")
+
+# Fallback if not found (show what's actually in the file)
+if [ -z "$FLOW_ID" ]; then
+  echo "[ERROR] Could not find flow ID for '$FLOW_ALIAS' in $FLOW_FILE"
+  echo "[DEBUG] Available aliases:"
+  grep -o '"alias":"[^"]*"' "$FLOW_FILE"
+  exit 1
+fi
 
 if [ -z "$FLOW_ID" ]; then
   echo " Could not find flow ID for '$FLOW_ALIAS'."

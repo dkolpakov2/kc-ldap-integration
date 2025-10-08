@@ -53,6 +53,42 @@ if [ -z "$GROUP_ID" ]; then
 fi
 echo "[OK] Found group ID: $GROUP_ID"
 
+# --- CHECK IF REALM EXISTS ---
+echo "[INFO] Checking realm '$REALM'..."
+REALMS_JSON=$(/opt/keycloak/bin/kcadm.sh get realms)
+REALM_EXISTS=$(printf '%s\n' "$REALMS_JSON" | grep "\"realm\" *: *\"$REALM\"" || true)
+
+if [ -z "$REALM_EXISTS" ]; then
+  echo "[ERROR] Realm '$REALM' does not exist. Please create it first."
+  exit 1
+fi
+echo "[OK] Realm '$REALM' exists."
+
+
+# --- CHECK IF ADMIN ROLE ALREADY EXISTS ---
+echo "[INFO] Checking if role '$ROLE_NAME' already exists..."
+ROLES_JSON=$(/opt/keycloak/bin/kcadm.sh get roles -r "$REALM")
+ROLE_EXISTS=$(printf '%s\n' "$ROLES_JSON" | grep "\"name\" *: *\"$ROLE_NAME\"" || true)
+
+if [ -n "$ROLE_EXISTS" ]; then
+  echo "[WARN] Role '$ROLE_NAME' already exists in realm '$REALM'. Skipping creation."
+  exit 0
+fi
+
+# --- CREATE ADMIN ROLE ---
+echo "[INFO] Creating realm role '$ROLE_NAME'..."
+CREATE_RESULT=$(/opt/keycloak/bin/kcadm.sh create roles -r "$REALM" \
+  -s name="$ROLE_NAME" \
+  -s description="Administrator role for realm $REALM" 2>&1)
+
+if echo "$CREATE_RESULT" | grep -qi "Created"; then
+  echo "[SUCCESS] Role '$ROLE_NAME' created successfully in realm '$REALM'."
+else
+  echo "[ERROR] Failed to create role. Output:"
+  echo "$CREATE_RESULT"
+  exit 1
+fi
+
 # --- GET ADMIN ROLE ID ---
 echo "[INFO] Getting 'admin' role ID..."
 ROLES_JSON=$(/opt/keycloak/bin/kcadm.sh get roles -r "$KC_REALM")

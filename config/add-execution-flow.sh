@@ -37,3 +37,13 @@ $KC_ADMIN update "authentication/flows/$FLOW_ALIAS/executions" -r "$REALM" \
   -s requirement="$REQUIREMENT"
 
 echo "✅ X.509 execution successfully added to flow '$FLOW_ALIAS'"
+
+PROVIDER_ID="auth-x509-client-username-form"
+JSON_FILE="executions.json"
+# Read file content and normalize
+JSON=$(cat "$JSON_FILE" | tr -d '\n' | sed 's/},/},\n/g')
+
+# Extract ID for the given providerId
+EXEC_ID=$(echo "$JSON" | grep "$PROVIDER_ID" -B5 | grep '"id"' | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+echo "Execution ID for providerId '$PROVIDER_ID' is: $EXEC_ID"

@@ -3338,7 +3338,25 @@ USER keycloak
 
 # Start command
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--features=x509"]
-  
+
+
+{
+  "id": "x509-username",
+  "displayName": "X509/Validate Username",
+  "description": "Validates users based on the X509 client certificate."
+}
+
+[ {
+  "id": "12345",
+  "requirement":"DISABLED",
+  "displayName": "X509/Validate Username Form",
+  "requirementChoices": [ "REQUIRED", "ALTERNATIVE", "DISABLED" ],
+  "configurable": true,
+  "providerId" : "auth-x509-client-username-form",
+  "level" : 0,
+  "index" : 1
+} ]
+
 =========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 

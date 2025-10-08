@@ -27,6 +27,8 @@ fi
 echo " Found group '$LDAP_GROUP_NAME' with ID: $GROUP_ID"
 # Run manual for testing
 /opt/keycloak/bin/kcadm.sh get clients -r $REALM --fields id,clientId | grep realm-management
+## If no result, it means realm-management doesn’t exist in that realm (it may only be in master).
+
 
 # Get the "admin" realm role (from master realm’s "realm-management" client)
 CLIENT_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r $REALM \

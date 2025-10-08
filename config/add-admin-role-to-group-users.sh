@@ -42,28 +42,49 @@ if [ -z "$ADMIN_ROLE_ID" ]; then
 fi
 echo "[OK] Found admin role ID: $ADMIN_ROLE_ID"
 
-# --- GET USERS IN GROUP ---
-echo "[INFO] Fetching users from group '$GROUP_NAME'..."
-/opt/keycloak/bin/kcadm.sh get "groups/$GROUP_ID/members" -r "$KC_REALM" > "$TMP_DIR/users.json"
+# --- GET GROUP ID ---
+echo "[INFO] Getting group ID for '$GROUP_NAME'..."
+GROUPS_JSON=$(/opt/keycloak/bin/kcadm.sh get groups -r "$KC_REALM")
+GROUP_ID=$(printf '%s\n' "$GROUPS_JSON" | grep -B1 "\"name\" *: *\"$GROUP_NAME\"" | grep '"id"' | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
-USER_IDS=$(grep '"id"' "$TMP_DIR/users.json" | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+if [ -z "$GROUP_ID" ]; then
+  echo "[ERROR] Group '$GROUP_NAME' not found in realm '$KC_REALM'."
+  exit 1
+fi
+echo "[OK] Found group ID: $GROUP_ID"
+
+# --- GET ADMIN ROLE ID ---
+echo "[INFO] Getting 'admin' role ID..."
+ROLES_JSON=$(/opt/keycloak/bin/kcadm.sh get roles -r "$KC_REALM")
+ADMIN_ROLE_ID=$(printf '%s\n' "$ROLES_JSON" | grep -B3 '"name" *: *"admin"' | grep '"id"' | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+if [ -z "$ADMIN_ROLE_ID" ]; then
+  echo "[ERROR] Role 'admin' not found in realm '$KC_REALM'."
+  exit 1
+fi
+echo "[OK] Found admin role ID: $ADMIN_ROLE_ID"
+
+# --- GET USERS IN GROUP ---
+echo "[INFO] Getting users in group '$GROUP_NAME'..."
+USERS_JSON=$(/opt/keycloak/bin/kcadm.sh get "groups/$GROUP_ID/members" -r "$KC_REALM")
+USER_IDS=$(printf '%s\n' "$USERS_JSON" | grep '"id"' | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
 if [ -z "$USER_IDS" ]; then
-  echo "[WARN] No users found in group '$GROUP_NAME'"
+  echo "[WARN] No users found in group '$GROUP_NAME'."
   exit 0
 fi
 
-# --- ADD ROLE TO EACH USER ---
-echo "[INFO] Assigning admin role to users..."
+# --- ASSIGN ADMIN ROLE TO EACH USER ---
+echo "[INFO] Assigning 'admin' role to all users..."
 for USER_ID in $USER_IDS; do
-  echo "  → Adding admin role to user $USER_ID..."
+  echo "  → Adding role to user: $USER_ID"
   /opt/keycloak/bin/kcadm.sh create "users/$USER_ID/role-mappings/realm" -r "$KC_REALM" \
-    -f <(echo "[{\"id\":\"$ADMIN_ROLE_ID\",\"name\":\"admin\"}]") >/dev/null 2>&1
+    -f <(printf '[{"id":"%s","name":"admin"}]' "$ADMIN_ROLE_ID") >/dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo "    [OK] Done"
   else
-    echo "    [ERROR] Failed to assign role to $USER_ID"
+    echo "    [ERROR] Failed for user $USER_ID"
   fi
 done
 
-echo "[SUCCESS] Completed assigning 'admin' role to all users in group '$GROUP_NAME'."
+echo "[SUCCESS] Admin role assigned to all users in group '$GROUP_NAME'."

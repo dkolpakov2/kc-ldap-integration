@@ -67,6 +67,7 @@ echo "[INFO] X509 provider available."
 # --- Check if execution already exists ------------------------------------
 EXECUTIONS=$($KCADM get authentication/flows/"$FLOW_ALIAS"/executions -r "$REALM")
 
+
 if echo "$EXECUTIONS" | grep -q '"providerId" *: *"x509-username"'; then
   echo "[INFO] X509 execution already attached to flow '$FLOW_ALIAS'."
 else
@@ -85,3 +86,27 @@ if echo "$EXEC_CHECK" | grep -q '"providerId" *: *"x509-username"'; then
 else
   echo "[WARN] X509 step not visible after creation."
 fi
+
+##  Correct flow:
+echo "[INFO] Adding X509/Validate Username execution..."
+ADD_OUT=$($KCADM create "authentication/flows/$FLOW_ALIAS/executions/execution" -r "$REALM" \
+  -s provider=x509-username 2>&1 || true)
+
+if echo "$ADD_OUT" | grep -q "404"; then
+  echo "[ERROR] Flow alias '$FLOW_ALIAS' not found or invalid. Check with:"
+  echo "  $KCADM get authentication/flows -r $REALM"
+  exit 1
+fi
+
+# --- Get execution ID for the new provider ---
+EXECUTIONS=$($KCADM get authentication/flows/"$FLOW_ALIAS"/executions -r "$REALM")
+EXEC_ID=$(echo "$EXECUTIONS" | sed -nE '/"providerId" *: *"x509-username"/{n;/id/s/.*"id" *: *"([^"]+)".*/\1/p;}' | head -1)
+
+if [ -z "$EXEC_ID" ]; then
+  echo "[ERROR] Could not get execution ID for X509 provider."
+  exit 1
+fi
+echo "[INFO] Execution ID: $EXEC_ID"
+
+# --- Set requirement to REQUIRED ---
+$KCADM update authentication/executions/"$EXEC_ID" -r "$REALM" -s requirement=REQUIRED

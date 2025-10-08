@@ -11,6 +11,7 @@ KC_USER="admin"
 KC_PASS="admin"
 KC_CLIENT="admin-cli"
 TMP_DIR="/tmp/kc_work"
+ROLE_NAME=$ROLE_NAME
 mkdir -p "$TMP_DIR"
 
 # --- LOGIN ---

@@ -3312,7 +3312,17 @@ This script will:
 
 No jq or awk dependencies — only sed, grep, and standard bash tools.
 
+## FIx null when creting execution :
+null [No authentication provider  found for id: x509-username ]
+## Option 1 — Add environment variable (recommended)
+# In your Docker or Helm values:
+env:
+  - name: KC_FEATURES
+    value: "x509-auth"
+# Or in Docker CLI:
+  docker run -e KC_FEATURES=x509-auth ...
 
+  
 =========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 

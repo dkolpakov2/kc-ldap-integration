@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# --- CONFIG ---
+KC_ADMIN="/opt/keycloak/bin/kcadm.sh"
+KC_URL="http://localhost:8080"
+REALM="kafka-usb-dev"
+FLOW_ALIAS="kafka-direct-grant"
+PROVIDER="x509-username"
+REQUIREMENT="REQUIRED"
+
+# --- LOGIN ---
+$KC_ADMIN config credentials --server "$KC_URL" --realm master --user admin --password admin
+
+# --- Ensure flow exists ---
+echo "Checking if flow '$FLOW_ALIAS' exists..."
+FLOW_ID=$($KC_ADMIN get authentication/flows -r "$REALM" | grep -B2 "\"alias\" : \"$FLOW_ALIAS\"" | grep "\"id\" :" | sed 's/.*: "\(.*\)".*/\1/')
+
+if [ -z "$FLOW_ID" ]; then
+  echo "Flow not found. Creating '$FLOW_ALIAS'..."
+  $KC_ADMIN create authentication/flows -r "$REALM" \
+    -s alias="$FLOW_ALIAS" \
+    -s description="Custom grant flow for Kafka" \
+    -s providerId=basic-flow \
+    -s topLevel=true \
+    -s builtIn=false
+  echo "Flow created."
+fi
+
+# --- Add execution ---
+echo "Adding execution for provider '$PROVIDER'..."
+$KC_ADMIN create "authentication/flows/$FLOW_ALIAS/executions/execution" -r "$REALM" \
+  -s provider="$PROVIDER"
+
+# --- Set requirement ---
+echo "Setting requirement to $REQUIREMENT..."
+$KC_ADMIN update "authentication/flows/$FLOW_ALIAS/executions" -r "$REALM" \
+  -s requirement="$REQUIREMENT"
+
+echo "✅ X.509 execution successfully added to flow '$FLOW_ALIAS'"

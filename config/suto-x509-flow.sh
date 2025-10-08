@@ -87,10 +87,14 @@ else
   echo "[WARN] X509 step not visible after creation."
 fi
 
-##  Correct flow:
-echo "[INFO] Adding X509/Validate Username execution..."
-ADD_OUT=$($KCADM create "authentication/flows/$FLOW_ALIAS/executions/execution" -r "$REALM" \
-  -s provider=x509-username 2>&1 || true)
+##  calling the wrong endpoint for adding a provider execution.
+## create is for creating custom flows, not adding an execution step to an existing flow.
+
+##The correct action is to use the add-execution sub-command.
+
+# echo "[INFO] Adding X509/Validate Username execution..."
+# ADD_OUT=$($KCADM create "authentication/flows/$FLOW_ALIAS/executions/execution" -r "$REALM" \
+#   -s provider=x509-username 2>&1 || true)
 
 if echo "$ADD_OUT" | grep -q "404"; then
   echo "[ERROR] Flow alias '$FLOW_ALIAS' not found or invalid. Check with:"

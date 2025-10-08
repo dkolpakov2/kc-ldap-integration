@@ -3322,6 +3322,22 @@ env:
 # Or in Docker CLI:
   docker run -e KC_FEATURES=x509-auth ...
 
+# Switch to root so we can copy files and install packages if needed
+USER root
+
+# Download the official X.509 provider JAR and place it into providers directory
+RUN mkdir -p /opt/keycloak/providers && \
+    curl -L -o /opt/keycloak/providers/keycloak-x509-user-lookup-26.0.0.jar \
+    https://github.com/keycloak/keycloak/releases/download/26.0.0/keycloak-x509-user-lookup-26.0.0.jar
+
+# Rebuild Keycloak to register the provider
+RUN /opt/keycloak/bin/kc.sh build --features=x509
+
+# Back to keycloak user for runtime
+USER keycloak
+
+# Start command
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--features=x509"]
   
 =========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX

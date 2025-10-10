@@ -3357,6 +3357,60 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--fe
   "index" : 1
 } ]
 
+[{
+  "id": "myrealm",
+  "realm": "myrealm"
+},...]
+
+CLEANED=$(echo "$REALMS_JSON" | tr -d ' ' | tr -d '"' )
+
+# Find matching realm block and extract id
+# Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]
+REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p")
+ESCAPED_REALM=$(printf '%s\n' "$REALM_NAME" | sed 's/[][\.^$*\/]/\\&/g')
+
+REALM_ID=$(printf '%s\n' "$CLEANED" |
+  sed -n "/\"realm\": *\"$ESCAPED_REALM\"/{N; s/.*\"id\": *\"\([^\"]*\)\".*/\1/p}"
+)
+REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "s/.*\"id\"[ ]*:[ ]*\"\([^\"]*\)\"[^{]*\"realm\"[ ]*:[ ]*\"$REALM_NAME\".*/\1/p")
+REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "s/.*\"id\":\"\([^\"]*\)\"[^{]*\"realm\":\"$REALM_NAME\".*/\1/p")
+
+#!/bin/bash
+set -e
+
+KC_URL="http://localhost:8080"
+REALM_NAME="myrealm"
+ADMIN_USER="admin"
+ADMIN_PASS="admin123"
+CLIENT_ID="admin-cli"
+
+# === 1. Get Admin Token ===
+TOKEN=$(curl -s -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
+  -d "username=${ADMIN_USER}" \
+  -d "password=${ADMIN_PASS}" \
+  -d "grant_type=password" \
+  -d "client_id=${CLIENT_ID}" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+if [ -z "$TOKEN" ]; then
+  echo "❌ Failed to get access token"
+  exit 1
+fi
+
+# === 2. Get Realms JSON ===
+REALMS_JSON=$(curl -s -X GET "${KC_URL}/admin/realms" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json")
+
+# === 3. Extract "id" by "realm" ===
+REALM_ID=$(echo "$REALMS_JSON" | tr -d '\n' | sed -n "s/.*\"realm\":\"${REALM_NAME}\"[^{]*\"id\":\"\([^\"]*\)\".*/\1/p")
+
+if [ -z "$REALM_ID" ]; then
+  echo "❌ Realm '${REALM_NAME}' not found"
+  exit 1
+fi
+
+echo "✅ Realm '${REALM_NAME}' ID: ${REALM_ID}"
 =========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 

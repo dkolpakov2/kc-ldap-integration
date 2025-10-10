@@ -3,6 +3,7 @@
 # Assigns the "admin" role to all users in a given Keycloak group
 # ============================================================
 
+
 # --- CONFIG ---
 KC_REALM="kafka-usb-dev"
 GROUP_NAME="ldap-admin-group"

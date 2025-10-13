@@ -164,3 +164,57 @@ echo " Verifying '$FLOW_ALIAS' configuration..."
 $KEYCLOAK_BIN get authentication/flows/$FLOW_ALIAS/executions -r "$REALM"
 
 echo " Authentication flow '$FLOW_ALIAS' with X509/Validate Username created successfully!"
+
+# Escape sed special characters
+SAFE_URL=$(printf '%s' "$NEW_URL" | sed -e 's/[\/&]/\\&/g')
+
+# Use sed with alternate delimiter to avoid slash issues
+# Matches the "connectionUrl": ["..."] pattern safely
+sed -i "s|\"connectionUrl\": *\[\"[^\"]*\"\]|\"connectionUrl\": [\"$SAFE_URL\"]|" "$JSON_FILE"
+
+
+##================================================================
+#!/bin/bash
+# Usage: ./update_json_url.sh path/to/json_file.json
+JSON_FILE="$1"
+
+#!/bin/bash
+
+# Usage: ./update_connection_url.sh path/to/json_file.json
+
+JSON_FILE="$1"
+
+if [[ -z "$JSON_FILE" ]]; then
+  echo "❌ Usage: $0 path/to/json_file.json"
+  exit 1
+fi
+
+if [[ ! -f "$JSON_FILE" ]]; then
+  echo "❌ File not found: $JSON_FILE"
+  exit 1
+fi
+
+# Extract the connectionUrl value (first entry)
+CONN_URL=$(grep -o '"connectionUrl"[[:space:]]*:[[:space:]]*\[[[:space:]]*"[^"]*"' "$JSON_FILE" | sed -E 's/.*"connectionUrl"[[:space:]]*:[[:space:]]*\[[[:space:]]*"([^"]*)".*/\1/')
+
+if [[ -z "$CONN_URL" ]]; then
+  echo "❌ Could not find connectionUrl in $JSON_FILE"
+  exit 1
+fi
+
+# Remove the first 7 characters ("ldap://")
+MODIFIED_URL="${CONN_URL:7}"
+
+echo "Original: $CONN_URL"
+echo "Modified: $MODIFIED_URL"
+
+# Replace the connectionUrl value inline (keeping JSON formatting)
+sed -i.bak "s#\"connectionUrl\"[[:space:]]*:[[:space:]]*\[[[:space:]]*\"[^\"]*\"#\"connectionUrl\": [\"${MODIFIED_URL}\"#g" "$JSON_FILE"
+
+echo "✅ Updated $JSON_FILE successfully."
+
+# Replace NEW_URL value in the JSON file (inline)
+# Use sed to safely replace the value, keeping the rest of the JSON untouched
+# sed -i.bak "s#\"NEW_URL\"[[:space:]]*:[[:space:]]*\"[^\"]*\"#\"NEW_URL\": \"${MODIFIED_URL}\"#g" "$JSON_FILE"
+
+echo "✅ Updated $JSON_FILE successfully."

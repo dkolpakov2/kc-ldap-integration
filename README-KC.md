@@ -3365,7 +3365,7 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--fe
 CLEANED=$(echo "$REALMS_JSON" | tr -d ' ' | tr -d '"' )
 
 # Find matching realm block and extract id
-# Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]
+# Example input: [{"id":"master","realm":"master"},{"id":"kafka-dev","realm":"kafka-dev"}]
 REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p")
 ESCAPED_REALM=$(printf '%s\n' "$REALM_NAME" | sed 's/[][\.^$*\/]/\\&/g')
 

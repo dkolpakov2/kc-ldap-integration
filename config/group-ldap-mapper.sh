@@ -1,15 +1,29 @@
 #!/bin/bash
 set -e
-# ----------------------------
-# INSERT PARAMETER INTO "config" BLOCK
-# ----------------------------
-echo "🔧 Adding 'allowGroupsMultipleParents' parameter to config..."
+# ----------------------------------------
+# CHECK EXISTING MAPPERS
+# ----------------------------------------
+EXISTING_MAPPERS=$(kcadm.sh get components -r "$REALM" --query 'providerId=group-ldap-mapper' 2>/dev/null || true)
 
-# Find line after "config": { and insert our new parameter
-# Works even if indentation varies
-sed -i '/"config"[[:space:]]*:[[:space:]]*{/{n; s/^/    '"$PARAM"'\n/;}' "$JSON_FILE"
+# Use grep to detect presence of the mapper name (case-insensitive)
+if echo "$EXISTING_MAPPERS" | grep -qi "\"name\" *: *\"$GROUP_MAPPER_NAME\""; then
+  echo "✅ LDAP group mapper '$GROUP_MAPPER_NAME' already exists — skipping creation."
+  exit 0
+fi
 
-echo "✅ Parameter added successfully to $JSON_FILE"
+# ----------------------------------------
+# CREATE GROUP MAPPER IF NOT EXISTS
+# ----------------------------------------
+if [[ ! -f "$GROUP_MAPPER_FILE" ]]; then
+  echo "❌ Missing JSON file: $GROUP_MAPPER_FILE"
+  exit 1
+fi
+
+echo "⚙️ Creating new LDAP group mapper '$GROUP_MAPPER_NAME'..."
+kcadm.sh create components -r "$REALM" -f "$GROUP_MAPPER_FILE"
+echo "✅ LDAP group mapper '$GROUP_MAPPER_NAME' created successfully."
+
+
 LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv | tail -n +2)
 # how to remove double quotas from file by using ded command
 LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv \

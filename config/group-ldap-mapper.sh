@@ -1,3 +1,15 @@
+#!/bin/bash
+set -e
+# ----------------------------
+# INSERT PARAMETER INTO "config" BLOCK
+# ----------------------------
+echo "🔧 Adding 'allowGroupsMultipleParents' parameter to config..."
+
+# Find line after "config": { and insert our new parameter
+# Works even if indentation varies
+sed -i '/"config"[[:space:]]*:[[:space:]]*{/{n; s/^/    '"$PARAM"'\n/;}' "$JSON_FILE"
+
+echo "✅ Parameter added successfully to $JSON_FILE"
 LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv | tail -n +2)
 # how to remove double quotas from file by using ded command
 LDAP_PROVIDER_ID=$(/opt/keycloak/bin/kcadm.sh get components -r master --query 'name=AD LDAP' --fields id --format csv \

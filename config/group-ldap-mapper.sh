@@ -56,7 +56,31 @@ sed -i "s/PUT_YOUR_LDAP_PROVIDER_ID_HERE/$LDAP_PROVIDER_ID/" ldap-group-config.j
 
 
 # trigger LDAP full sync
-/opt/keycloak/bin/kcadm.sh create user-storage/$LDAP_PROVIDER_ID/sync?action=triggerFullSync -r master
+#/opt/keycloak/bin/kcadm.sh create user-storage/$LDAP_PROVIDER_ID/sync?action=triggerFullSync -r master
+
+# ----------------------------------------
+# CHECK EXISTING MAPPERS
+# ----------------------------------------
+EXISTING_MAPPERS=$(kcadm.sh get components -r "$REALM" --query 'providerId=group-ldap-mapper' 2>/dev/null || true)
+
+# Use grep to detect presence of the mapper name (case-insensitive)
+if echo "$EXISTING_MAPPERS" | grep -qi "\"name\" *: *\"$GROUP_MAPPER_NAME\""; then
+  echo "✅ LDAP group mapper '$GROUP_MAPPER_NAME' already exists — skipping creation."
+  exit 0
+fi
+
+# ----------------------------------------
+# CREATE GROUP MAPPER IF NOT EXISTS
+# ----------------------------------------
+if [[ ! -f "$GROUP_MAPPER_FILE" ]]; then
+  echo "❌ Missing JSON file: $GROUP_MAPPER_FILE"
+  exit 1
+fi
+
+echo "⚙️ Creating new LDAP group mapper '$GROUP_MAPPER_NAME'..."
+kcadm.sh create components -r "$REALM" -f "$GROUP_MAPPER_FILE"
+echo "✅ LDAP group mapper '$GROUP_MAPPER_NAME' created successfully."
+
 
 # trigger LDAP sync update
 /opt/keycloak/bin/kcadm.sh create user-storage/$LDAP_PROVIDER_ID/sync?action=triggerChangedUsersSync -r master

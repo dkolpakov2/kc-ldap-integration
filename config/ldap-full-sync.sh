@@ -75,6 +75,26 @@ if ! $KCADM create "user-storage/$PROVIDER_ID/sync" -r "$REALM" -s action=trigge
     $KCADM update groups/$GROUP_ID -r "$REALM" -s subGroups=[] || true
   done
 
+  ## Clean State before sync
+  ## empty user-storage:
+  REALM="myrealm"
+  LDAP_PROVIDER_NAME="ldap-provider"
+  echo "🩺 Checking for previous failed sync..."
+  # 1️⃣ Find the LDAP provider ID
+  LDAP_ID=$($KCADM get components -r "$REALM" --query 'providerId=ldap' 2>/dev/null | grep -B 2 "\"name\" *: *\"$LDAP_PROVIDER_NAME\"" | grep '"id"' | sed 's/.*"id" *: *"\([^"]*\)".*/\1/' | head -n 1)
+  echo "Found LDAP provider: $LDAP_ID"
+
+  SYNC_STATE=$($KCADM get user-storage/$LDAP_ID/sync -r "$REALM" 2>/dev/null || true)
+  if echo "$SYNC_STATE" | grep -qi "failed"; then
+    echo "⚠️ Previous sync failed — cleaning imported users..."
+    # 2️⃣ Remove previously imported users (but not realm users)
+    $KCADM delete user-storage/$LDAP_ID/remove-imported-users -r "$REALM"
+  fi
+
+  # 3️⃣ Verify removal
+  $KCADM get users -r "$REALM" | grep '"username"' || echo "No users found — ready for fresh sync."
+
+  
   echo "✅ Group cleanup complete. Retrying sync..."
   $KCADM create "user-storage/$PROVIDER_ID/sync" -r "$REALM" -s action=triggerFullSync
 else

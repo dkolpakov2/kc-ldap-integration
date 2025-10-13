@@ -218,3 +218,51 @@ echo "✅ Updated $JSON_FILE successfully."
 # sed -i.bak "s#\"NEW_URL\"[[:space:]]*:[[:space:]]*\"[^\"]*\"#\"NEW_URL\": \"${MODIFIED_URL}\"#g" "$JSON_FILE"
 
 echo "✅ Updated $JSON_FILE successfully."
+
+
+##===================================================================================
+#!/bin/bash
+
+# Usage: ./update_connection_url_keep_prefix.sh path/to/json_file.json new_host_value
+# Example: ./update_connection_url_keep_prefix.sh config.json "dev-ldap-dns.us.com:636"
+
+JSON_FILE="$1"
+NEW_VALUE="$2"
+
+if [[ -z "$JSON_FILE" || -z "$NEW_VALUE" ]]; then
+  echo "❌ Usage: $0 path/to/json_file.json new_host_value"
+  exit 1
+fi
+
+if [[ ! -f "$JSON_FILE" ]]; then
+  echo "❌ File not found: $JSON_FILE"
+  exit 1
+fi
+
+# Extract the current connectionUrl value (first entry in the array)
+CURRENT_URL=$(grep -o '"connectionUrl"[[:space:]]*:[[:space:]]*\[[[:space:]]*"[^"]*"' "$JSON_FILE" \
+  | sed -E 's/.*"connectionUrl"[[:space:]]*:[[:space:]]*\[[[:space:]]*"([^"]*)".*/\1/')
+
+if [[ -z "$CURRENT_URL" ]]; then
+  echo "❌ Could not find connectionUrl in $JSON_FILE"
+  exit 1
+fi
+
+# Extract prefix ("ldap://") and the rest of the URL
+PREFIX="${CURRENT_URL:0:7}"
+OLD_REST="${CURRENT_URL:7}"
+
+echo "Current URL: $CURRENT_URL"
+echo "Prefix kept: $PREFIX"
+echo "Old rest: $OLD_REST"
+echo "New rest: $NEW_VALUE"
+
+# Construct the new URL
+UPDATED_URL="${PREFIX}${NEW_VALUE}"
+
+echo "✅ Final URL will be: $UPDATED_URL"
+
+# Replace only the connectionUrl value in JSON (in-place)
+sed -i.bak "s#\"connectionUrl\"[[:space:]]*:[[:space:]]*\[[[:space:]]*\"[^\"]*\"#\"connectionUrl\": [\"${UPDATED_URL}\"#g" "$JSON_FILE"
+
+echo "✅ Updated $JSON_FILE successfully."

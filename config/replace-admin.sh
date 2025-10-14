@@ -1,5 +1,9 @@
 #!/bin/bash
 set -e
+# RUN:
+# kubectl cp replace-admin.sh dev/keycloak-0:/tmp/replace-admin.sh
+# RUN inside pod:
+# kubectl exec -it keycloak-0 -n dev -- bash /tmp/replace-admin.sh
 
 # --- Configuration ---
 REALM="master"

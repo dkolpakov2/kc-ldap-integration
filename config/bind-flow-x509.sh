@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Usage
+# kubectl cp bind-flow-x509.sh dev/keycloak-0:/tmp/
+# kubectl exec -it keycloak-0 -n dev -- bash /tmp/bind-flow-x509.sh
+# Or locally:
+# export KEYCLOAK_HOME=/opt/keycloak
+# bash bind-flow-x509.sh
+
 # === Configuration ===
 REALM="master"
 FLOW_ALIAS="kafka-direct-grand"

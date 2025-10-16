@@ -7,6 +7,13 @@ set -e
 # Or locally:
 # export KEYCLOAK_HOME=/opt/keycloak
 # bash bind-flow-x509.sh
+# looking for a specific execution like “X509/Validate Username Form”, filter by authenticator:
+##SELECT id, flow_id, requirement, authenticator 
+#FROM authentication_execution 
+#WHERE flow_id = (
+#    SELECT id FROM authentication_flow WHERE alias = 'kafka-direct-grand')
+#AND authenticator = 'auth-x509-username-form';
+
 
 # === Configuration ===
 REALM="master"

@@ -20,9 +20,12 @@ REALM="master"
 FLOW_ALIAS="kafka-direct-grand"
 EXECUTION_PROVIDER="auth-x509-client-username-form"
 EXECUTION_DISPLAY_NAME="X509/Validate Username Form"
-KEYCLOAK_URL="http://localhost:8080"
+# KEYCLOAK_URL="http://localhost:8080"
 ADMIN_USER="admin"
 ADMIN_PASS="StrongPassword123!"
+ACTION="bindFlow"
+KCADM="$KEYCLOAK_HOME/bin/kcadm.sh"
+
 
 # === Login to Keycloak ===
 echo " Logging in to Keycloak..."
@@ -31,6 +34,35 @@ $KEYCLOAK_HOME/bin/kcadm.sh config credentials \
   --realm "$REALM" \
   --user "$ADMIN_USER" \
   --password "$ADMIN_PASS"
+
+# === Verify Flow Exists ===
+FLOW_EXISTS=$($KCADM get authentication/flows -r "$REALM" | grep -c "\"alias\" : \"$FLOW_ALIAS\"")
+if [[ "$FLOW_EXISTS" -eq 0 ]]; then
+  echo "[ERROR] Flow alias '$FLOW_ALIAS' not found in realm '$REALM'"
+  exit 1
+fi
+
+echo "[INFO] Found flow alias '$FLOW_ALIAS'"
+
+# === Add execution to flow ===
+# Important: use endpoint /authentication/flows/$FLOW_ALIAS/executions/execution
+ADD_OUT=$($KCADM create authentication/flows/"$FLOW_ALIAS"/executions/execution \
+  -r "$REALM" \
+  -s "provider=$ACTION" 2>&1 || true)
+
+if echo "$ADD_OUT" | grep -q "parent flow does not exist"; then
+  echo "[ERROR] The flow '$FLOW_ALIAS' exists but the endpoint rejected it. Double-check realm and alias spelling."
+  exit 1
+fi
+
+if echo "$ADD_OUT" | grep -q "id"; then
+  echo "[SUCCESS] Successfully bound execution '$ACTION' to flow '$FLOW_ALIAS'"
+else
+  echo "[WARN] Could not confirm success. Response:"
+  echo "$ADD_OUT"
+fi
+
+#===============================================================
 
 # === Get Flow ID ===
 FLOW_ID=$($KCADM get authentication/flows -r "$REALM" --fields id,alias | \

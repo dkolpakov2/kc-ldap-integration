@@ -3355,7 +3355,7 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--fe
   "providerId" : "auth-x509-client-username-form",
   "level" : 0,
   "index" : 1
-} ]
+},... ]
 
 [{
   "id": "myrealm",
@@ -3411,6 +3411,11 @@ if [ -z "$REALM_ID" ]; then
 fi
 
 echo "✅ Realm '${REALM_NAME}' ID: ${REALM_ID}"
+
+=========================================================================
+I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...
+
+
 =========================================================================
 XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
 

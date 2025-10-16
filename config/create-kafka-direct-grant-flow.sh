@@ -53,7 +53,7 @@ $KEYCLOAK_BIN create authentication/flows -r "$REALM" \
 echo " Getting flow ID for '$FLOW_ALIAS'..."
 FLOW_LIST=$($KEYCLOAK_BIN get authentication/flows -r "$REALM")
 
-FLOW_ID=$(echo "$FLOW_LIST" | sed -n "/\"alias\":\"$FLOW_ALIAS\"/s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
+FLOW_ID=$(echo "$FLOW_LIT" | sed -n "/\"alias\":\"$FLOW_ALIAS\"/s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
 # output:
 # FLOW_LIST=[{"id":""12345","alias":"kafak-direct-grant","description":"something","providerId":"basic-flow", "topLevel":true, "builtIn":false, "authenticationExecutions":[]}]
 

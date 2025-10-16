@@ -3411,7 +3411,82 @@ if [ -z "$REALM_ID" ]; then
 fi
 
 echo "✅ Realm '${REALM_NAME}' ID: ${REALM_ID}"
+=========================================================================
+HARSHICORP VOULT use admin creds in kubernetes to start Docker container:
+Vault path is secret/data/keycloak-admin and it contains:
+  vault kv put secret/keycloak-admin username=admin password=SuperSecret123
+You can fetch secrets using the Vault CLI or Agent and create a Kubernetes Secret dynamically.
+## Option A: Simple manual (for test/dev)
+# Fetch values from Vault
+USERNAME=$(vault kv get -field=username secret/keycloak-admin)
+PASSWORD=$(vault kv get -field=password secret/keycloak-admin)
 
+# Create Kubernetes Secret
+kubectl create secret generic keycloak-admin-creds \
+  --from-literal=username=$USERNAME \
+  --from-literal=password=$PASSWORD
+--------------
+Option B: Auto-inject via Vault Agent Injector (recommended)
+  Annotate your Keycloak Deployment so Vault auto-injects the credentials file:
+>> yaml:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "keycloak-role"
+        vault.hashicorp.com/agent-inject-secret-admin.txt: "secret/data/keycloak-admin"
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:latest
+          command: ["/opt/start.sh"]
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /vault/secrets
+      volumes:
+        - name: vault-secrets
+          emptyDir: {}
+# Then inside the container, the file /vault/secrets/admin.txt will contain:
+  username=admin
+  password=SuperSecret123
+Step 3 — Create ConfigMap for start.sh
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-startup
+data:
+  start.sh: |
+    #!/bin/bash
+    source /vault/secrets/admin.txt
+    echo "Starting Keycloak with user $username"
+    /opt/keycloak/bin/kc.sh start --hostname-strict=false \
+      --spi-admin-console-theme=keycloak \
+      --admin-username=$username \
+      --admin-password=$password
+>> Then mount this ConfigMap as an executable file:
+
+volumeMounts:
+  - name: start-script
+    mountPath: /opt/start.sh
+    subPath: start.sh
+    readOnly: true
+volumes:
+  - name: start-script
+    configMap:
+      name: keycloak-startup
+      defaultMode: 0755
+## ⚙️ Step 4 — Verify
+When the Pod starts:
+Vault Agent injects the creds file.
+  start.sh sources it.
+Keycloak runs with admin creds from Vault — no plaintext secrets in YAML.
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...
 

@@ -5,6 +5,12 @@
 #          with execution "X509/Validate Username"
 # Compatible: Keycloak 21+, no jq/awk dependencies
 # ============================================================
+#PUT /admin/realms/{realm}/authentication/executions/{executionId}
+#{  "flowId": "{subFlowId}" }
+#PUT /admin/realms/{realm}/authentication/executions/{executionId}
+#-s flowId={subFlowId}
+
+
 
 set -e
 
@@ -46,7 +52,7 @@ $KEYCLOAK_BIN create authentication/flows -r "$REALM" \
   -s topLevel=true \
   -s builtIn=false \
   || echo " Flow '$FLOW_ALIAS' may already exist, continuing..."
-
+sleep 5
 # -----------------------------
 # 4️ Retrieve Flow ID
 # -----------------------------

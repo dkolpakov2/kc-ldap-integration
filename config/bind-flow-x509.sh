@@ -32,6 +32,33 @@ $KEYCLOAK_HOME/bin/kcadm.sh config credentials \
   --user "$ADMIN_USER" \
   --password "$ADMIN_PASS"
 
+# === Get Flow ID ===
+FLOW_ID=$($KCADM get authentication/flows -r "$REALM" --fields id,alias | \
+grep -A1 "\"alias\" : \"$FLOW_ALIAS\"" | grep "\"id\"" | cut -d':' -f2 | tr -d ' ",') 
+
+if [[ -z "$FLOW_ID" ]]; then
+  echo "[ERROR] Could not find flow alias '$FLOW_ALIAS' in realm '$REALM'."
+  exit 1
+fi
+
+echo "[INFO] Found flow '$FLOW_ALIAS' with ID: $FLOW_ID"
+
+# === Bind the Flow ===
+$KCADM create authentication/executions \
+  -r "$REALM" \
+  -s "authenticator=$ACTION" \
+  -s "parentFlow=$FLOW_ALIAS" \
+  -s "requirement=ALTERNATIVE" >/dev/null 2>&1
+
+if [[ $? -eq 0 ]]; then
+  echo "[SUCCESS] Action '$ACTION' successfully bound to flow '$FLOW_ALIAS'."
+else
+  echo "[ERROR] Failed to bind '$ACTION' to '$FLOW_ALIAS'."
+  exit 1
+fi
+
+
+# 2nd Option  ======================================================================
 # === Verify flow exists ===
 FLOW_ID=$($KEYCLOAK_HOME/bin/kcadm.sh get authentication/flows \
   --fields alias,id --format csv | grep "$FLOW_ALIAS" | cut -d',' -f2)

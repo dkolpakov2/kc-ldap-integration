@@ -416,3 +416,6 @@ kubectl apply --dry-run=client -f rendered.yaml
 
 helm install --generate-name ./mychart -f values.yaml --dry-run --debug | less
 ========================================= 
+set | sort
+printenv | sort
+ech " Total vars: $(printenv | wc -l)"

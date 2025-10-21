@@ -1,7 +1,17 @@
 #!/bin/bash
 
+# Create Base-64 encoded script:
+# base64 keycloak-full-setup.sh > keycloak-full-setup.sh.b64
+
+#Optional: Encrypt Instead of Base64 (More Secure)
+openssl enc -aes-256-cbc -salt -in keycloak-full-setup.sh -out keycloak-full-setup.sh.enc
+# decript:
+openssl enc -aes-256-cbc -d -in keycloak-full-setup.sh.enc -out /tmp/keycloak-full-setup.sh
+
+
 # Usage:
 # ./run-keycloak-setup.sh <admin_user> <admin_pass> <REALM> <LDAP_NAME> <FLOW_ALIAS>
+# Optional: Encrypt Instead of Base64 (More Secure)
 
 # Check argument count
 if [ "$#" -ne 5 ]; then

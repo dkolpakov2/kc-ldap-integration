@@ -20,6 +20,15 @@ if [ -z "$LDAP_CREDENTIAL" ]; then
   exit 1
 fi
 
+## 2nd Option get encoded base64 pass:
+# Read the plain text secret from the Vault-injected file
+LDAP_CRED=$(grep -oP '(?<="bindCredential": \[")[^"]+' /vault/secrets/ldap)
+
+# Encode it
+ENCODED_CRED=$(echo -n "$LDAP_CRED" | base64)
+
+
+
 # ===============================================
 # Step 2: Inject secret into ldap-config.json
 # ===============================================

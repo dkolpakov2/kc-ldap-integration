@@ -3487,6 +3487,42 @@ When the Pod starts:
 Vault Agent injects the creds file.
   start.sh sources it.
 Keycloak runs with admin creds from Vault — no plaintext secrets in YAML.
+
+
+=========================================================================
+VAULT  Agent or Injector  for Kubernetes:
+-------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "keycloak-role"
+        vault.hashicorp.com/agent-inject-secret-ldap: "secret/data/ldap"
+        vault.hashicorp.com/agent-inject-template-ldap: |
+          {{- with secret "secret/data/ldap" -}}
+          {
+            "bindCredential": ["{{ .Data.data.ldapCredential }}"]
+          }
+          {{- end }}
+## ----
+vault.hashicorp.com/agent-inject-template-ldap: |
+  {{- with secret "secret/data/ldap" -}}
+  {
+    "bindCredential": ["{{ .Data.data.ldapCredential }}"],
+    "bindCredentialBase64": ["{{ base64Encode .Data.data.ldapCredential }}"]
+  }
+  {{- end }}          
+## ====
+👉 This will auto-generate a file like /vault/secrets/ldap in your pod.
+  Then, in your bash script, just read from that file:
+>> bash
+LDAP_CREDENTIAL=$(grep -oP '(?<="bindCredential": \[")[^"]+' /vault/secrets/ldap)
+
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...
 

@@ -35,8 +35,8 @@ if [ ! -f "$ENCODED_SCRIPT" ]; then
   exit 2
 fi
 
-# Decode the base64 script
-base64 --decode "$ENCODED_SCRIPT" > "$DECODED_SCRIPT"
+cd 
+
 chmod +x "$DECODED_SCRIPT"
 
 echo "Decoded Keycloak setup script to: $DECODED_SCRIPT"

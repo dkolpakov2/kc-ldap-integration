@@ -10,6 +10,10 @@
 # ✅ Update flow
 # ./run-kcadm.sh "/opt/keycloak/bin/kcadm.sh --config /tmp/kcadm.config" update authentication/flows/kafka-direct-grant -r myrealm -s description="Updated flow"
 
+# chmod +x run-kcadm.sh
+# ./run-kcadm.sh get realms
+# ./run-kcadm.sh get users -r master
+# ./run-kcadm.sh create realms -s realm=myrealm -s enabled=true
 # usage: 
 # ./run-kcadm.sh get realms
 # Define base command (reusable)

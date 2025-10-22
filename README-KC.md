@@ -3523,6 +3523,52 @@ vault.hashicorp.com/agent-inject-template-ldap: |
 >> bash
 LDAP_CREDENTIAL=$(grep -oP '(?<="bindCredential": \[")[^"]+' /vault/secrets/ldap)
 
+===========================================================================
+Rotate admin password:
+✅ Option A: Change password using kcadm.sh
+    If you’re logged in as admin (or using a valid config):
+>>
+/opt/keycloak/bin/kcadm.sh update users/<admin_user_id> \
+    -r master \
+    -s "credentials=[{'type':'password','value':'<new_password>','temporary':false}]" \
+    --config /tmp/kcadm.config
+
+✅ Option B: Reset password from inside the Pod
+    If your admin password is injected from env vars (e.g., Kubernetes Secret), rotate it like this:
+>>
+  kubectl get secret keycloak-admin-creds -o yaml
+  # edit the secret (base64 encode the new password)
+  kubectl edit secret keycloak-admin-creds
+  # restart pod to apply new env var
+  kubectl rollout restart deployment keycloak
+---
+🧩 2. Use a Token Instead of Password with kcadm.sh
+
+You can authenticate with a Bearer token instead of a username/password combo.
+
+✅ Step 1: Get a token
+TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
+  -d "client_id=admin-cli" \
+  -d "username=admin" \
+  -d "password=$ADMIN_PASS" \
+  -d "grant_type=password" | grep -oP '(?<="access_token":")[^"]+')
+
+✅ Step 2: Use token with kcadm.sh
+/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 \
+  --realm master \
+  --client admin-cli \
+  --token "$TOKEN"
+
+This will write the token to your /tmp/kcadm.config, and subsequent commands will use it automatically:
+
+/opt/keycloak/bin/kcadm.sh get realms --config /tmp/kcadm.config
+
+-----
+🧩 3. Automating Rotation + Token Setup
+  can wrap this logic in a bash script like using:
+  >>
+    config/rotate-admin.sh:
+
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...
 

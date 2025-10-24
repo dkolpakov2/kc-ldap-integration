@@ -3,7 +3,7 @@
 # --- CONFIG ---
 KC_ADMIN="/opt/keycloak/bin/kcadm.sh"
 KC_URL="http://localhost:8080"
-REALM="kafka-usb-dev"
+REALM="kafka-dev"
 FLOW_ALIAS="kafka-direct-grant"
 PROVIDER="x509-username"
 REQUIREMENT="REQUIRED"

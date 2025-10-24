@@ -2,7 +2,7 @@
 set -e
 
 # Input realm name
-REALM_NAME="kafka-usb-dev"
+REALM_NAME="kafka-dev"
 
 # Login to Keycloak (update values as needed)
 export KC_ADMIN_USER="admin"
@@ -31,7 +31,7 @@ REALM_ID=$(printf '%s\n' "$CLEANED" |
 )
 
 # Find matching realm block and extract id
-# Example input: [{"id":"master","realm":"master"},{"id":"kafka-usb-dev","realm":"kafka-usb-dev"}]
+# Example input: [{"id":"master","realm":"master"},{"id":"kafka-dev","realm":"kafka-dev"}]
 REALM_ID=$(echo "$CLEANED" | sed -n "s/.*id:\([^,}]*\),realm:$REALM_NAME.*/\1/p")
 
 #if If "id" comes before "realm", swap search order:
@@ -52,8 +52,8 @@ REALM_ID=$(printf '%s\n' "$CLEANED" |
 )
 echo "Realm ID: $REALM_ID"
 ## 
-REALM_NAME="kafka-usb-dev"
-CLEANED='[{"id":"123456005","realm":"master"},{"id":"0987656001","realm":"kafka-usb-dev"}]'
+REALM_NAME="kafka--dev"
+CLEANED='[{"id":"123456005","realm":"master"},{"id":"0987656001","realm":"kafka-dev"}]'
 
 REALM_ID=$(printf '%s\n' "$CLEANED" | sed -n "s/.*\"id\":\"\([^\"]*\)\"[^{]*\"realm\":\"$REALM_NAME\".*/\1/p")
 

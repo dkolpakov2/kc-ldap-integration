@@ -5,7 +5,7 @@
 
 
 # --- CONFIG ---
-KC_REALM="kafka-usb-dev"
+KC_REALM="kafka-dev"
 GROUP_NAME="ldap-admin-group"
 KC_BASE_URL="http://localhost:8080"
 KC_USER="admin"

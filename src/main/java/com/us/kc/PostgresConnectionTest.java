@@ -1,4 +1,4 @@
-package com.usb.kc;
+package com.us.kc;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;

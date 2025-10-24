@@ -1,4 +1,4 @@
-package com.usb.kc.ldap;
+package com.us.kc.ldap;
 
 import javax.naming.Context;
 import javax.naming.NamingException;

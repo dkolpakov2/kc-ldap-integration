@@ -1,4 +1,4 @@
-package com.usb.kc.ldap;
+package com.us.kc.ldap;
 
 import com.unboundid.ldap.sdk.*;
 import org.keycloak.OAuth2Constants;

@@ -3362,6 +3362,11 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--fe
   "realm": "myrealm"
 },...]
 
+[{
+  "name": "${client_account}",
+  "rootUrl": "${authBaseUrl}"
+},...]
+
 CLEANED=$(echo "$REALMS_JSON" | tr -d ' ' | tr -d '"' )
 
 # Find matching realm block and extract id

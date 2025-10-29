@@ -69,6 +69,22 @@ $KCADM create clients -r "$REALM" --config "$KCADM_CONFIG" -f - <<EOF
 }
 EOF
 
+
+##### OR
+echo ">>> Creating Kafka Broker client in realm: $REALM"
+$KCADM create clients --config "$CONFIG_FILE" -r "$REALM" -s clientId="kafka-broker" \
+  -s enabled=true \
+  -s 'redirectUris=["*"]' \
+  -s 'webOrigins=["*"]' \
+  -s publicClient=false \
+  -s serviceAccountsEnabled=true \
+  -s directAccessGrantsEnabled=true \
+  -s authorizationServicesEnabled=true \
+  -s protocol="openid-connect"
+
+echo ">>> Client 'kafka-broker' created successfully in realm '$REALM'."
+##### 
+
 # ---- Get created client ID ----
 CLIENT_ID=$($KCADM get clients -r "$REALM" --config "$KCADM_CONFIG" --fields id,clientId | grep -A1 '"clientId" : "kafka-broker"' | grep '"id"' | sed 's/.*: "\(.*\)".*/\1/')
 

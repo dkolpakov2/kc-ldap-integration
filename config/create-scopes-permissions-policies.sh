@@ -144,13 +144,13 @@ fi
 SCOPES=("AlterConfig" "ClusterAction" "DescribeConfigs" "Read" "Write")
 
 for SCOPE in "${SCOPES[@]}"; do
-  echo "🎯 Ensuring scope '$SCOPE' exists..."
+  echo " Ensuring scope '$SCOPE' exists..."
   EXIST=$($KC get clients/$CLIENT_UUID/authz/resource-server/scope -r "$REALM" --config "$CONFIG_FILE" | grep -c "\"name\" : \"$SCOPE\"") || true
   if [ "$EXIST" -eq 0 ]; then
     $KC create clients/$CLIENT_UUID/authz/resource-server/scope -r "$REALM" --config "$CONFIG_FILE" -s name="$SCOPE" >/dev/null
-    echo "✅ Created scope: $SCOPE"
+    echo " Created scope: $SCOPE"
   else
-    echo "ℹ️ Scope '$SCOPE' already exists."
+    echo " Scope '$SCOPE' already exists."
   fi
 done
 
@@ -158,24 +158,24 @@ done
 create_permission() {
   local NAME=$1
   local SCOPES_JSON=$2
-  echo "🧾 Creating permission '$NAME' with scopes $SCOPES_JSON..."
+  echo " Creating permission '$NAME' with scopes $SCOPES_JSON..."
   $KC create clients/$CLIENT_UUID/authz/resource-server/permission/scope \
     --config "$CONFIG_FILE" -r "$REALM" \
     -s name="$NAME" \
     -s type="scope" \
     -s decisionStrategy="UNANIMOUS" \
     -s scopes="$SCOPES_JSON" >/dev/null 2>&1 \
-    && echo "✅ Permission '$NAME' created." \
-    || echo "ℹ️ Permission '$NAME' may already exist."
+    && echo " Permission '$NAME' created." \
+    || echo " Permission '$NAME' may already exist."
 }
 
 create_permission "cluster-access" '["AlterConfig","ClusterAction","DescribeConfigs"]'
 create_permission "topic-access-read" '["Read"]'
 create_permission "topic-access-write" '["Write"]'
 
-echo "✅ All permissions created for '$CLIENT_ID'."
+echo " All permissions created for '$CLIENT_ID'."
 
-echo "📋 Summary:"
+echo " Summary:"
 echo "  Realm: $REALM"
 echo "  Client: $CLIENT_ID"
 echo "  Permissions:"

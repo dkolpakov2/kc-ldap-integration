@@ -158,14 +158,15 @@ GROUPS_OUTPUT=$($KCADM get groups -r "$REALM" --fields id,name,path --format csv
 
 # Remove carriage returns, quotes, and spaces
 GROUPS_CLEAN=$(echo "$GROUPS_OUTPUT" | tr -d '\r' | sed 's/"//g')
+GROUP_ID=$(echo "$CLEAN_JSON" | sed -n "s/.*\"name\":\"$GROUP_NAME\"[^}]*\"id\":\"\([^\"]*\)\".*/\1/p")
 
 # Search for the group name in the "path" column and extract the first field (id)
-GROUP_ID=$(echo "$GROUPS_CLEAN" | while IFS=, read -r id name path; do
-  if [ "$path" = "$group_name" ]; then
-    echo "$id"
-    break
-  fi
-done)
+# GROUP_ID=$(echo "$GROUPS_CLEAN" | while IFS=, read -r id name path; do
+#   if [ "$path" = "$group_name" ]; then
+#     echo "$id"
+#     break
+#   fi
+# done)
 
 if [ -n "$GROUP_ID" ]; then
   echo " Found group '$group_name' with ID: $GROUP_ID"

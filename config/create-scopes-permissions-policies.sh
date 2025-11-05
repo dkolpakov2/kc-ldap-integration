@@ -82,6 +82,14 @@ RESOURCE_LIST='[
   }
 ]'
 
+GROUPS_LIST='[
+  {
+    "id" : "12312423423"
+    "name" : "DEV_test_RO",
+    
+  }...
+]'
+
 # Remove newlines, tabs, and spaces for simpler parsing
 CLEAN_JSON=$(echo "$RESOURCE_LIST" | tr -d '\n\t ')
 
@@ -152,6 +160,35 @@ create_group_policy() {
     echo " Group '$group_name' not found — skipping policy '$policy_name'"
     return
   fi
+-----------------------
+GROUPS_LIST='[
+  {
+    "id" : "12312423423",
+    "name" : "DEV_test_RO"
+  },
+  {
+    "id" : "987654321",
+    "name" : "DEV_test_WO"
+  }
+]'
+
+GROUP_NAME="DEV_test_RO"
+
+# 1️⃣ Normalize the JSON (remove newlines, tabs, and extra spaces)
+CLEAN_JSON=$(echo "$GROUPS_LIST" | tr -d '\n\t\r ')
+
+# 2️⃣ Extract the ID for the matching name
+GROUP_ID=$(echo "$CLEAN_JSON" | sed -n "s/.*\"name\":\"$GROUP_NAME\"[^}]*\"id\":\"\([^\"]*\)\".*/\1/p")
+
+# 3️⃣ Output check
+if [ -n "$GROUP_ID" ]; then
+  echo " Found group '$GROUP_NAME' with ID: $GROUP_ID"
+else
+  echo " Group '$GROUP_NAME' not found"
+  echo "DEBUG JSON: $CLEAN_JSON"
+fi
+
+
 -----------------------
 # Get the raw list of groups from Keycloak
 GROUPS_OUTPUT=$($KCADM get groups -r "$REALM" --fields id,name,path --format csv 2>/dev/null)

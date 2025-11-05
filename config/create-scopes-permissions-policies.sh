@@ -152,7 +152,28 @@ create_group_policy() {
     echo " Group '$group_name' not found — skipping policy '$policy_name'"
     return
   fi
+-----------------------
+# Get the raw list of groups from Keycloak
+GROUPS_OUTPUT=$($KCADM get groups -r "$REALM" --fields id,name,path --format csv 2>/dev/null)
 
+# Remove carriage returns, quotes, and spaces
+GROUPS_CLEAN=$(echo "$GROUPS_OUTPUT" | tr -d '\r' | sed 's/"//g')
+
+# Search for the group name in the "path" column and extract the first field (id)
+GROUP_ID=$(echo "$GROUPS_CLEAN" | while IFS=, read -r id name path; do
+  if [ "$path" = "$group_name" ]; then
+    echo "$id"
+    break
+  fi
+done)
+
+if [ -n "$GROUP_ID" ]; then
+  echo " Found group '$group_name' with ID: $GROUP_ID"
+else
+  echo " Group '$group_name' not found in realm '$REALM'"
+fi
+
+----------------------
   echo "→ Creating policy: $policy_name (Group: $group_name)"
   $KC create clients/$CLIENT_UUID/authz/resource-server/policy/group \
     -r "$REALM" \

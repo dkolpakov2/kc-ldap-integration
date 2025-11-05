@@ -50,15 +50,31 @@ done
 echo " Authorization scopes created."
 
 # ========== GET RESOURCE IDs ==========
-TOPIC_RESOURCE_ID=$($KC get clients/$CLIENT_UUID/authz/resource-server/resource -r "$REALM" \
-  --fields id,name --format csv | grep "topic:demo-topic" | cut -d, -f1)
-CLUSTER_RESOURCE_ID=$($KC get clients/$CLIENT_UUID/authz/resource-server/resource -r "$REALM" \
-  --fields id,name --format csv | grep "cluster:*" | cut -d, -f1)
+# TOPIC_RESOURCE_ID=$($KC get clients/$CLIENT_UUID/authz/resource-server/resource -r "$REALM" \
+#   --fields id,name --format csv | grep "topic:demo-topic" | cut -d, -f1)
+# CLUSTER_RESOURCE_ID=$($KC get clients/$CLIENT_UUID/authz/resource-server/resource -r "$REALM" \
+#   --fields id,name --format csv | grep "cluster:*" | cut -d, -f1)
+
+# Get the resource list (JSON)
+RESOURCE_LIST=$($KCADM get clients/$CLIENT_UUID/authz/resource-server/resource -r "$REALM" --config "$CONFIG_FILE")
+echo "RESOURCE_LIST: $RESOURCE_LIST"
+
+# Extract topic:demo-topic resource ID safely without jq
+TOPIC_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "topic:demo-topic"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
+CLUSTER_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "cluster:*"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
+
+if [ -z "$TOPIC_RESOURCE_ID" ]; then
+  echo " Error: Could not find resource 'topic:demo-topic'"
+  exit 1
+else
+  echo " Found resource ID for topic:demo-topic = $TOPIC_RESOURCE_ID"
+fi
 
 if [[ -z "$TOPIC_RESOURCE_ID" || -z "$CLUSTER_RESOURCE_ID" ]]; then
   echo " Resource IDs missing — make sure 'topic:demo-topic' and 'cluster:*' exist."
   exit 1
 fi
+
 
 # ========== CREATE PERMISSIONS ==========
 create_permission() {

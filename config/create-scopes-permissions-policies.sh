@@ -60,8 +60,26 @@ RESOURCE_LIST=$($KCADM get clients/$CLIENT_UUID/authz/resource-server/resource -
 echo "RESOURCE_LIST: $RESOURCE_LIST"
 
 # Extract topic:demo-topic resource ID safely without jq
-TOPIC_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "topic:demo-topic"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
-CLUSTER_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "cluster:*"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
+# Get all resources from the client
+RESOURCE_JSON=$($KCADM get clients/$CLIENT_UUID/authz/resource-server/resource \
+  -r "$REALM" --config "$CONFIG_FILE")
+
+# Extract resource ID for topic:demo-topic (no jq/awk)
+TOPIC_RESOURCE_ID=$(echo "$RESOURCE_JSON" | \
+  tr -d '\r' | \
+  sed -n '/"name" : "topic:demo-topic"/,/}/p' | \
+  grep '"id"' | \
+  sed 's/.*: "\(.*\)".*/\1/' | head -1)
+
+if [ -z "$TOPIC_RESOURCE_ID" ]; then
+  echo " Resource 'topic:demo-topic' not found!"
+  exit 1
+else
+  echo " Found topic resource ID: $TOPIC_RESOURCE_ID"
+fi
+
+# TOPIC_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "topic:demo-topic"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
+# CLUSTER_RESOURCE_ID=$(echo "$RESOURCE_LIST" | awk '/"name" : "cluster:*"/ {getline; if ($1=="\"id\"") {gsub("[\",]", "", $3); print $3; exit}}')
 
 if [ -z "$TOPIC_RESOURCE_ID" ]; then
   echo " Error: Could not find resource 'topic:demo-topic'"

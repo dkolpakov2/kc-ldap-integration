@@ -65,11 +65,30 @@ RESOURCE_JSON=$($KCADM get clients/$CLIENT_UUID/authz/resource-server/resource \
   -r "$REALM" --config "$CONFIG_FILE")
 
 # Extract resource ID for topic:demo-topic (no jq/awk)
-TOPIC_RESOURCE_ID=$(echo "$RESOURCE_JSON" | \
-  tr -d '\r' | \
-  sed -n '/"name" : "topic:demo-topic"/,/}/p' | \
-  grep '"id"' | \
-  sed 's/.*: "\(.*\)".*/\1/' | head -1)
+# TOPIC_RESOURCE_ID=$(echo "$RESOURCE_JSON" | \
+#   tr -d '\r' | \
+#   sed -n '/"name" : "topic:demo-topic"/,/}/p' | \
+#   grep '"id"' | \
+#   sed 's/.*: "\(.*\)".*/\1/' | head -1)
+
+RESOURCE_LIST='[
+  {
+    "name" : "cluster:*",
+    "_id" : "12312423423"
+  },
+  {
+    "name" : "topic:demo-topic",
+    "_id" : "9999999999"
+  }
+]'
+
+# Remove newlines, tabs, and spaces for simpler parsing
+CLEAN_JSON=$(echo "$RESOURCE_LIST" | tr -d '\n\t ')
+
+# Extract the "_id" value only for "cluster:*"
+ID_VALUE=$(echo "$CLEAN_JSON" | sed -n 's/.*"name":"cluster:\*","_id":"\([^"]*\)".*/\1/p')
+
+echo "Cluster ID: $ID_VALUE"
 
 if [ -z "$TOPIC_RESOURCE_ID" ]; then
   echo " Resource 'topic:demo-topic' not found!"

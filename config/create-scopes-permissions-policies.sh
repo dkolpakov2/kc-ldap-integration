@@ -93,6 +93,22 @@ GROUPS_LIST='[
 # Remove newlines, tabs, and spaces for simpler parsing
 CLEAN_JSON=$(echo "$RESOURCE_LIST" | tr -d '\n\t ')
 
+========================
+
+echo " Keycloak Client Resource Setup"
+
+# Ask user for resource name
+read -p " Enter Keycloak client resource name: " RESOURCE_NAME
+
+# Check if empty
+if [ -z "$RESOURCE_NAME" ]; then
+  echo " Resource name cannot be empty. Exiting."
+  exit 1
+fi
+
+echo " You entered resource: '$RESOURCE_NAME'"
+
+=======================
 # Extract the "_id" value only for "cluster:*"
 ID_VALUE=$(echo "$CLEAN_JSON" | sed -n 's/.*"name":"cluster:\*","_id":"\([^"]*\)".*/\1/p')
 

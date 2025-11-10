@@ -153,6 +153,14 @@ create_permission() {
     -s scopes="[\"$scope\"]" >/dev/null || true
 }
 
+. Clean quotes using tr
+PERM_ID=$(echo "$PERM_ID" | tr -d '"\'')
+This removes all ' and " characters from the string.
+
+✅ 2. Clean quotes using Bash parameter expansion (fastest)
+PERM_ID=${PERM_ID//\"/}
+PERM_ID=${PERM_ID//\'/}
+
 create_permission "topic:demo-topic:Alter" "$TOPIC_RESOURCE_ID" "Alter"
 create_permission "cluster:dev:AlterConfig" "$CLUSTER_RESOURCE_ID" "AlterConfig"
 create_permission "cluster:dev:ClusterAction" "$CLUSTER_RESOURCE_ID" "ClusterAction"

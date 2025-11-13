@@ -28,7 +28,7 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 "$KCADM" config credentials --server "$KEYCLOAK_URL" --realm master --user "$ADMIN_USER" --password "$ADMIN_PASS" --config "$CONFIG_FILE"
 
 ## =============Pass a list as one argument================
-# Usage:  ./script.sh "one two three"
+# Usage:  ./script.sh "one two three" 
 LIST="$1"
 for item in $LIST; do
   echo "Item: $item"

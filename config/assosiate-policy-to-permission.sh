@@ -23,8 +23,34 @@ KCADM="/opt/keycloak/bin/kcadm.sh"
 CONFIG_FILE="/tmp/kcadm.config"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 
+
 # Login (stores token in config file)
 "$KCADM" config credentials --server "$KEYCLOAK_URL" --realm master --user "$ADMIN_USER" --password "$ADMIN_PASS" --config "$CONFIG_FILE"
+
+## =============Pass a list as one argument================
+# Usage:  ./script.sh "one two three"
+LIST="$1"
+for item in $LIST; do
+  echo "Item: $item"
+done
+
+## =========
+PARAMS=(
+  "-s" "name=my-permission"
+  "-s" "type=scope-based"
+  "-s" "decisionStrategy=UNANIMOUS"
+)
+
+"$KCADM" create clients/$CLIENT_UUID/authz/resource-server/permission/resource \
+  -r "$REALM" --config "$CONFIG_FILE" "${PARAMS[@]}"
+
+
+
+
+
+
+##  ============================
+
 
 # Helper: extract value by name from JSON returned by kcadm (no jq/awk)
 # Finds first occurrence of "name" : "<NAME>" and the nearest "id" near it.

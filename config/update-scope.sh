@@ -4,10 +4,21 @@
 REALM="ess-kafka"
 CLIENT_ID="kafka-broker"
 SCOPE_NAME="ClusterAction"
+SCOPES="cluster:dev:create,cluster:dev:read,cluster:dev:update"
 RESOURCE_NAME="cluster:*"
 PERMISSION_NAME="cluster-admin-permission"
 CONFIG_FILE="/tmp/kcadm.config"
 KCADM="/opt/keycloak/bin/kcadm.sh --config $CONFIG_FILE"
+
+SCOPES_JSON="[$(
+  echo "$SCOPES" \
+    | sed 's/,/", "/g' \
+    | sed 's/^/"/; s/$/"/' \
+    | sed 's/"/\\"/g'
+)]"
+
+echo "$SCOPES_JSON"
+## OUTPUT: [\"cluster:dev:create\", \"cluster:dev:read\", \"cluster:dev:update\"]
 
 echo " Finding client UUID for '$CLIENT_ID'..."
 CLIENT_UUID=$($KCADM get clients -r "$REALM" --fields id,clientId \
@@ -48,6 +59,7 @@ echo " Scope ID: $SCOPE_ID"
 echo " Looking up permission '$PERMISSION_NAME'..."
 PERM_ID=$($KCADM get clients/$CLIENT_UUID/authz/resource-server/permission/resource -r "$REALM" \
   | tr -d '\n\t\r ' | sed -n "s/.*\"name\":\"$PERMISSION_NAME\"[^}]*\"id\":\"\([^\"]*\)\".*/\1/p")
+
 
 if [ -z "$PERM_ID" ]; then
   echo " Permission '$PERMISSION_NAME' not found. Creating new permission..."

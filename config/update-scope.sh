@@ -20,6 +20,24 @@ SCOPES_JSON="[$(
 echo "$SCOPES_JSON"
 ## OUTPUT: [\"cluster:dev:create\", \"cluster:dev:read\", \"cluster:dev:update\"]
 
+RESOURCE_NAME="cluster/dev/resource1"
+CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+REALM="dev"
+CONFIG_FILE="/path/to/kcadm.config"
+
+# Query resources
+RESOURCE_ID=$(
+  kcadm.sh get "clients/$CLIENT_ID/authz/resource-server/resource" \
+    --config "$CONFIG_FILE" -r "$REALM" \
+    | jq -r ".[] | select(.name == \"$RESOURCE_NAME\") | ._id"
+)
+
+if [[ -n "$RESOURCE_ID" && "$RESOURCE_ID" != "null" ]]; then
+    echo "Resource FOUND: $RESOURCE_ID"
+else
+    echo "Resource NOT FOUND"
+fi
+
 echo " Finding client UUID for '$CLIENT_ID'..."
 CLIENT_UUID=$($KCADM get clients -r "$REALM" --fields id,clientId \
   | grep -B1 "\"clientId\" : \"$CLIENT_ID\"" | grep '"id"' | sed -E 's/.*"id" : "(.*)".*/\1/' | tr -d '[:space:]')

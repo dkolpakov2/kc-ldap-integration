@@ -68,6 +68,27 @@ $KCADM create clients/$CLIENT_UUID/authz/resource-server/resource \
   -s uri="/topic/demo-topic" \
   -s ownerManagedAccess=true || echo "Resource 'topic:demo-topic' may already exist."
 
+## Parse Scopes add them in the loop:
+SCOPES=("AlterConfig" "ClusterAction" "DescribeConfigs")
+
+CMD=(
+  "$KCADM" create "clients/$CLIENT_UUID/authz/resource-server/permission/scope" \
+    --config "$CONFIG_FILE" -r "$REALM" \
+    -s name="cluster-access" \
+    -s description="Allow access to cluster:*" \
+    -s "resources[0]=$RESOURCE_ID" \
+    -s decisionStrategy="UNANIMOUS"
+)
+
+i=0
+for S in "${SCOPES[@]}"; do
+    CMD+=(-s "scopes[$i].name=$S")
+    ((i++))
+done
+
+"${CMD[@]}"
+
+
 # === Create Permissions ===
 echo ">>> Creating Permission: cluster-access"
 $KCADM create clients/$CLIENT_UUID/authz/resource-server/permission/resource \

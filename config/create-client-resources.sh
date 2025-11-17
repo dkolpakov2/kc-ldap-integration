@@ -68,6 +68,24 @@ $KCADM create clients/$CLIENT_UUID/authz/resource-server/resource \
   -s uri="/topic/demo-topic" \
   -s ownerManagedAccess=true || echo "Resource 'topic:demo-topic' may already exist."
 
+## ---- Add scopes to JSON------------------------
+SCOPES="read write"
+
+# Build JSON array dynamically
+JSON_SCOPES="["
+for S in $SCOPES; do
+    JSON_SCOPES+="\"$S\","
+done
+JSON_SCOPES="${JSON_SCOPES%,}]"   # remove last comma
+
+# Escape quotes for kcadm
+ESCAPED_SCOPES=$(printf '%s' "$JSON_SCOPES" | sed 's/"/\\"/g')
+
+echo "Final scopes JSON: $ESCAPED_SCOPES"
+
+####---------------------------------------------
+
+
 ## Parse Scopes add them in the loop:
 SCOPES=("AlterConfig" "ClusterAction" "DescribeConfigs")
 

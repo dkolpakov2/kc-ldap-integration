@@ -32,7 +32,7 @@ create_scope() {
   $KC create clients/$CLIENT_UUID/authz/resource-server/scope -r "$REALM" \
     -s name="$name" -s displayName="$display_name" >/dev/null || true
 }
-
+SCOPES=[\"AlterConfig\",\"ClusterAction\",\"DescribeConfigs\"]
 SCOPES=(Alter AlterConfig ClusterAction Create Delete Describe DescribeConfigs Write)
 # for S in "${SCOPES[@]}"; do
 #   create_scope "$S" "$S"

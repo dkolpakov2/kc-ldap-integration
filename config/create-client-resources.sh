@@ -83,6 +83,17 @@ ESCAPED_SCOPES=$(printf '%s' "$JSON_SCOPES" | sed 's/"/\\"/g')
 
 echo "Final scopes JSON: $ESCAPED_SCOPES"
 
+###########------ One liner  helper function---------------
+
+make_json_array() {
+    local out="["
+    for w in $1; do out+="\"$w\","; done
+    out="${out%,}]"
+    printf '%s' "$out" | sed 's/"/\\"/g'
+}
+# USage:
+ESCAPED_SCOPES=$(make_json_array "$SCOPES")
+
 ####---------------------------------------------
 
 

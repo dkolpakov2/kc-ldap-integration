@@ -48,6 +48,17 @@ fi
 # Original DN regex
 RAW_DN='CN=.*, OU=ISS, O="Company", L=.*, ST="Something", C="something"'
 
+cat <<EOF > client-update.json
+{
+  "attributes": {
+    "x509.subjectDnRegex": "$SUBJECT_DN_REGEX"
+  }
+}
+EOF
+
+kcadm.sh update clients/$CLIENT_ID -r $REALM -f client-update.json
+
+## 2nd Option:
 # Escape quotes → \"
 ESCAPED_DN="${RAW_DN//\"/\\\"}"
 

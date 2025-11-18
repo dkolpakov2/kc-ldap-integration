@@ -3601,3 +3601,11 @@ XXXXXXXXXXXXXXXXXXXXXXXXX..................XXXXXXXXXXXXXXXXXXXXXXXX
     - Map users → groups using either LDAP’s native mappingdn
 
 ===============================================    
+
+X509 username mapper?
+
+X509 certificate attribute mappers?
+
+Auto-create client if missing?
+
+Auto-attach flow?

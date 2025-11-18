@@ -24,6 +24,7 @@ if [[ -z "$CLIENT_UUID" ]]; then
     exit 1
 fi
 
+
 echo "Client UUID: $CLIENT_UUID"
 
 # X509 Subject DN Regex
@@ -41,3 +42,32 @@ if [[ $? -eq 0 ]]; then
 else
     echo " ERROR updating client"
 fi
+
+
+#########################
+# Original DN regex
+RAW_DN='CN=.*, OU=ISS, O="Company", L=.*, ST="Something", C="something"'
+
+# Escape quotes → \"
+ESCAPED_DN="${RAW_DN//\"/\\\"}"
+
+# Escape spaces → \␣
+ESCAPED_DN="${ESCAPED_DN// /\\ }"
+
+echo "Escaped DN: $ESCAPED_DN"
+
+# Get client UUID
+CLIENT_UUID=$($KCADM get clients -r "$REALM" --fields id,clientId \
+  | grep "\"clientId\" : \"$CLIENT_ID_NAME\"" \
+  | sed -n 's/.*"id" : "\(.*\)".*/\1/p')
+
+if [[ -z "$CLIENT_UUID" ]]; then
+  echo "Client not found!"
+  exit 1
+fi
+
+# Update client X509 configuration
+$KCADM update clients/$CLIENT_UUID -r "$REALM" \
+  -s clientAuthenticatorType=x509 \
+  -s "attributes.x509.allowRegexPattern=true" \
+  -s "attributes.x509.subjectDnRegex=$ESCAPED_DN"

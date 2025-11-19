@@ -42,15 +42,18 @@ Mirror LDAP → Kafka ACLs manually.
 Using Keycloak gives you:
 
 Feature	LDAP Only	Keycloak
-Authentication	✔	✔
-LDAP sync	✔	✔
-SSO / JWT tokens	❌	✔
-OAuth2 / OIDC	❌	✔
-Central user/role mapping	❌	✔
-Fine-grained permissions	❌	✔
-REST API for client management	❌	✔
-Federated identity flows	❌	✔
-Consistent config across clusters	❌	✔
+| Feature                           | LDAP Only | Keycloak |
+| --------------------------------- | --------- | -------- |
+| Authentication                    | ✔         | ✔        |
+| LDAP sync                         | ✔         | ✔        |
+| **SSO / JWT tokens**              | ❌         | ✔        |
+| **OAuth2 / OIDC**                 | ❌         | ✔        |
+| Central user/role mapping         | ❌         | ✔        |
+| Fine-grained permissions          | ❌         | ✔        |
+| REST API for client management    | ❌         | ✔        |
+| Federated identity flows          | ❌         | ✔        |
+| Consistent config across clusters | ❌         | ✔        |
+
 
 So Keycloak is recommended in complex multi-cluster Kafka deployments.
 

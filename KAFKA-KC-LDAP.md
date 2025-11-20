@@ -48,7 +48,7 @@ Feature	LDAP Only	Keycloak
 | LDAP sync                         | ✔         | ✔        |
 | **SSO / JWT tokens**              | ❌         | ✔        |
 | **OAuth2 / OIDC**                 | ❌         | ✔        |
-| Central user/role mapping         | ❌         | ✔        |
+| Central user/role mapping         | ❌         | ✔        |Justification for hi Cjenna
 | Fine-grained permissions          | ❌         | ✔        |
 | REST API for client management    | ❌         | ✔        |
 | Federated identity flows          | ❌         | ✔        |

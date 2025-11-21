@@ -28,7 +28,26 @@ Fix via kcadm:
 ADMIN_CLI_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r master -q clientId=admin-cli | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
 /opt/keycloak/bin/kcadm.sh update clients/$ADMIN_CLI_ID -r master -s 'directAccessGrantsEnabled=true'
 
+✅ Fix (run inside a Keycloak pod — no curl, no jq)
+1️⃣ Assign the missing realm role:
+/opt/keycloak/bin/kcadm.sh add-roles \
+  --uusername admin-dk \
+  --rolename realm-admin \
+  -r master
 
+2️⃣ Assign required client roles:
+/opt/keycloak/bin/kcadm.sh add-roles \
+  --uusername admin-dk \
+  --cclientid realm-management \
+  --rolename realm-admin \
+  -r master
+
+3️⃣ Retry login:
+kcadm.sh config credentials \
+  --server "$KEYCLOAK_URL" \
+  --realm master \
+  --user admin-dk \
+  --password "$ADMIN_PASS"
 
 ==========================================================
 Simulate LDAP Login via Script

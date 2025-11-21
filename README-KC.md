@@ -13,6 +13,24 @@ git branch -M master
 git push -u origin master
 
 ==========================================================
+Fix kcadm.sh ERROR:
+Invalid user credentials [invalid_grant]
+❗ User is enabled, but Direct Access Grants are disabled
+  Keycloak ONLY allows password grant if:
+  Direct Access Grants Enabled = ON
+  Check this:
+Clients → admin-cli → Settings
+  Should be:
+    Direct Access Grants Enabled = ON
+----------------
+Fix via kcadm:
+
+ADMIN_CLI_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r master -q clientId=admin-cli | grep '"id"' | head -1 | sed 's/.*"id" : "\(.*\)".*/\1/')
+/opt/keycloak/bin/kcadm.sh update clients/$ADMIN_CLI_ID -r master -s 'directAccessGrantsEnabled=true'
+
+
+
+==========================================================
 Simulate LDAP Login via Script
 ==========================================================
 
@@ -3394,7 +3412,8 @@ TOKEN=$(curl -s -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" 
   -d "username=${ADMIN_USER}" \
   -d "password=${ADMIN_PASS}" \
   -d "grant_type=password" \
-  -d "client_id=${CLIENT_ID}" \
+  \
+  
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 if [ -z "$TOKEN" ]; then

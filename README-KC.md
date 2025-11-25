@@ -3455,7 +3455,7 @@ fi
 
 echo "✅ Realm '${REALM_NAME}' ID: ${REALM_ID}"
 =========================================================================
-HARSHICORP VOULT use admin creds in kubernetes to start Docker container:
+HARSHICORP VAULT use admin creds in kubernetes to start Docker container:
 Vault path is secret/data/keycloak-admin and it contains:
   vault kv put secret/keycloak-admin username=admin password=SuperSecret123
 You can fetch secrets using the Vault CLI or Agent and create a Kubernetes Secret dynamically.

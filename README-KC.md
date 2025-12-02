@@ -3739,7 +3739,64 @@ kubectl create secret generic keycloak-admin-secret \
 | **Inside cluster pod**       | via internal service DNS    | `kcadm.sh --server                               http://keycloak.keycloak.svc.cluster.                                                         local:8080 ...` |
 | **Automation (Job/CronJob)** | within AKS                  | Job YAML running                                                       `kcadm.sh`commands |
 
+## The end of remote running scripts-------------------------------------
 
+=========================================================================
+✅ FIX — Use Admin CLI Service Account Instead of Personal User
+  Recommended (Reliable, script-safe)
+  - Instead of normal user login, enable the service account on admin-cli and authenticate with:
+    >> grant_type=client_credentials
+
+>> bash:
+#!/bin/bash
+
+KEYCLOAK_URL="http://keycloak.keycloak.svc.cluster.local:8080"
+REALM="master"
+CLIENT_ID="admin-cli"
+
+# get admin token using client credentials
+TOKEN=$(curl -s \
+  -d "client_id=$CLIENT_ID" \
+  -d "client_secret=$ADMIN_CLI_SECRET" \
+  -d "grant_type=client_credentials" \
+  "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" | jq -r .access_token)
+
+if [[ "$TOKEN" == "null" || -z "$TOKEN" ]]; then
+  echo "❌ Unable to authenticate using client credentials"
+  exit 1
+fi
+
+echo "✅ Got token"
+---------------------
+# PAss token to kcadm.sh
+>>
+/opt/keycloak/bin/kcadm.sh config credentials \
+   --server "$KEYCLOAK_URL" \
+   --realm master \
+   --client admin-cli \
+   --secret "$ADMIN_CLI_SECRET"
+-----------------
+##  Script to verify Credentials:
+#!/bin/bash
+echo "Checking if credentials work..."
+
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  -d "client_id=admin-cli" \
+  -d "username=$ADMIN_USER" \
+  -d "password=$ADMIN_PASS" \
+  -d "grant_type=password" \
+  "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token")
+
+if [[ "$HTTP_CODE" != "200" ]]; then
+  echo "❌ Bad credentials"
+  exit 1
+fi
+
+echo "✅ Credentials valid"
+----------------------------
+## Validate if User is in Wronf REALM:
+>>
+curl -s "$KEYCLOAK_URL/admin/realms/master/users?username=$ADMIN_USER"
 
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...

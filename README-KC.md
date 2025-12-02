@@ -3798,6 +3798,8 @@ echo "✅ Credentials valid"
 >>
 curl -s "$KEYCLOAK_URL/admin/realms/master/users?username=$ADMIN_USER"
 
+docker exec -it keycloak-container bash /opt/keycloak/scripts/fix-admin.sh
+
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...
 

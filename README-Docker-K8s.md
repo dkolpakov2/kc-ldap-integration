@@ -98,11 +98,28 @@ docker exec -it my-api-container /bin/bash
 
 docker run -d --rm --name nginx -p 443:8443 nginx:nginx
 ## Push Docker image to DEV AWS ECR
-# docker build -f Dockerfile -t renewables-dna-ds-ecr:iac-svc .
-# aws --profile newdev ecr get-login-password --region us-east-1 --no-verify-ssl | docker login --username AWS --password-stdin .dkr.ecr.us-east-1.amazonaws.com
-# docker tag renewables-dna-ds-ecr:iac-svc .dkr.ecr.us-east-1.amazonaws.com/renewables-dna-ds-ecr:ren-iac-svc
-# docker push .dkr.ecr.us-east-1.amazonaws.com/renewables-uai3031357-dna-ds-ecr:ren-iac-svc
+# docker build -f Dockerfile -t ew-ds-ecr:iac-svc .
+# aws --profile newdev ecr get-login-password --region us-east-1 --no-verify-ssl | docker login --username AWS --password-stdin .ecr.us-east-1.amazonaws.com
+# docker tag ew-ds-ecr:iac-svc .ecr.us-east-1.amazonaws.com/ew-ds-ecr:-iac-svc
+# docker push .ecr.us-east-1.amazonaws.com/ew-ds-ecr:-iac-svc
 >>
+
+
+## COpy script:
+docker cp keycloak-init.sh keycloak:/opt/keycloak/
+docker exec -it keycloak bash /opt/keycloak/keycloak-init.sh
+
+## RUN docker Script remotelly:
+docker exec -it keycloak-container bash /opt/keycloak/scripts/fix-admin.sh
+✅ 3. Run the script WITHOUT copying (send it over stdin)
+# This piped approach runs your local script inside the container without saving it there.
+docker exec -i keycloak bash < ./fix-keycloak-user.sh
+
+ℹ️ If your environment uses Kubernetes / AKS, use this instead:
+kubectl exec -it <pod> -- bash /scripts/setup.sh
+kubectl exec -i <pod> -- bash < ./local-script.sh
+
+### =========================================
 #
 docker run -d --name postgres --net keycloak-network -e POSTGRES_DB=keycloak -e POSTGRES_USER=keycloak -e POSTGRES_PASSWORD=password postgres
 docker run -d -link postgres:db user/wordpress
@@ -217,14 +234,14 @@ curl --http2 --cacert cert.crt --key ca.key --location --request POST 'https://d
 curl -s -H 'Host: domainname.com' -H 'X-Forwarded-For: 10.242.198.171' -H 'X-Forwarded-Proto: https'POST
 curl -iv -k --ciphers ALL -HHost:domainname.com --request GET 'https://127.0.0.1:443/auth/realms/master/protocol/openid-connect/certs' --verbose
 ------
-curl -iv -k --ciphers ALL --tls-max 1.2 --location --request GET 'https://domainname.ge.com/auth/realms/RENDS/protocol/openid-connect/certs' --verbose
+curl -iv -k --ciphers ALL --tls-max 1.2 --location --request GET 'https://domainname.ge.com/auth/realms/DS/protocol/openid-connect/certs' --verbose
 - context:
     cluster: test
     user: test
   name: test
-current-context: dev
+curt-context: dev
 kind: Config
-preferences: {}
+prefeces: {}
 - name: dev
   user:
     exec:
@@ -289,7 +306,7 @@ echo "username= "$username
 # save test start time
 DATE=`date`
 echo $test_name = "test_started->'$DATE'" > $working_dir/test_$username
-aws s3 cp $working_dir/test_$username s3://renewables-uai3031357-config-qa/testpft/test_$username --sse-kms-key-id arn:aws:kms:us-east-1:487459321624:key/435837b1-af36-4eab-b10c-31279d4de750 --sse aws:kms --acl bucket-owner-full-control  --no-verify-ssl 
+aws s3 cp $working_dir/test_$username s3://ew-uai3031357-config-qa/testpft/test_$username --sse-kms-key-id arn:aws:kms:us-east-1:487459321624:key/435837b1-af36-4eab-b10c-31279d4de750 --sse aws:kms --acl bucket-owner-full-control  --no-verify-ssl 
 #
 
 master_pod=`kubectl get pod -n pft | grep 'jmeter-server-'$username | awk '{print $1}'`
@@ -406,12 +423,12 @@ docker compose up -d --scale keycloak=3
  helm lint --with-subchats --strict
  helm unittest --update-golden
 
-Run this to render your chart and make sure it’s valid Kubernetes YAML:
+Run this to der your chart and make sure it’s valid Kubernetes YAML:
 
-helm template ./mychart -f values.yaml > rendered.yaml
-kubectl apply --dry-run=client -f rendered.yaml
+helm template ./mychart -f values.yaml > dered.yaml
+kubectl apply --dry-run=client -f dered.yaml
 
-👉 To confirm it’s rendering correctly before deploying, run:
+👉 To confirm it’s dering correctly before deploying, run:
 >>
 
 helm install --generate-name ./mychart -f values.yaml --dry-run --debug | less

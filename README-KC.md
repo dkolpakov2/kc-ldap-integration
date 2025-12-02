@@ -239,7 +239,7 @@ Deploy manually after KC is up:
 # Wait until keycloak is up, then run the script inside the container
   docker exec -it <keycloak-container-name> bash /opt/keycloak/configure-ldap.sh
 78  
-# -u 0 runs the command as root user. Once you're in:
+# -u 0 runs the command as root user. Once we're in:
 docker exec -u 0 -it <container_name_or_id> /bin/sh
 su - keycloak   //  back to KC user
 docker exec -u 0 <container_name> touch /root/test.txt
@@ -378,7 +378,7 @@ Path to groups in LDAP. Example:
 
 ----------------------------
 API/CLI Automation
-If you want this mapping to be created via script (Docker/Kubernetes friendly), you can use kcadm.sh:
+If we want this mapping to be created via script (Docker/Kubernetes friendly), we can use kcadm.sh:
 
 >>bash
 REALM=myrealm
@@ -473,7 +473,7 @@ Run:
 
 3️⃣ Clean Up Duplicate Users Before Sync
 
-If you want LDAP to import fresh, remove conflicting accounts:
+If we want LDAP to import fresh, remove conflicting accounts:
 
 ./kcadm.sh get users -r master --query email=duplicate@example.com --fields id,username,email --format csv \
   | tail -n +2 \
@@ -563,7 +563,7 @@ ldap-group-member.json template:
 
 ldapsearch -H ldap://-ad-server -D "binduser@example.com" -w "password" \
 -b "CN=Users,DC=example,DC=com" "(objectClass=group)" cn description mail managedBy
-## List AD group attributes you can use (besides description):
+## List AD group attributes we can use (besides description):
 Attribute Name	          Meaning
 cn	                Common Name (group name itself).
 distinguishedName	  Full DN of the group.
@@ -848,7 +848,7 @@ helm install keycloak keycloak/keycloak \
   --set externalDatabase.database=keycloak
 
 >> Step 3: Expose Keycloak in AKS
-## If you’re using an Ingress + AGIC (Azure Application Gateway Ingress Controller):
+## If we’re using an Ingress + AGIC (Azure Application Gateway Ingress Controller):
 - Apply ingress and map DNS to Application Gateway → AKS service.
 
 >>yaml:
@@ -1261,7 +1261,7 @@ volumes:
 
 ### 4. Verify Infinispan Connection
   1. Local: open http://localhost:11222/console
-  2. Thank youAKS: port-forward to Infinispan service:
+  2. Thank weAKS: port-forward to Infinispan service:
     kubectl port-forward svc/infinispan 11222:11222 -n keycloak
 
 ====================================================================
@@ -1316,7 +1316,7 @@ curl -u admin:password http://localhost:11222/rest/v2/cache-managers/default/hea
 5. Production Notes
   Use TLS between Keycloak and Infinispan (enable with --set security.endpointEncryption=true).
   Store Infinispan creds in Kubernetes Secrets (instead of plaintext).
-  If you run multiple Keycloak instances, ensure:
+  If we run multiple Keycloak instances, ensure:
     KC_CACHE=ispn
     KC_CACHE_STACK=kubernetes
   Configure readiness/liveness probes so Keycloak only starts after Infinispan is reachable.
@@ -1324,26 +1324,26 @@ curl -u admin:password http://localhost:11222/rest/v2/cache-managers/default/hea
 =============================================================================
 🔹 1. What "App Context" Usually Means in AKS
 In AKS (or Kubernetes in general), application context can refer to:
-   - Kubernetes Context: The kubectl context that tells which AKS cluster/namespace you’re operating in.
+   - Kubernetes Context: The kubectl context that tells which AKS cluster/namespace we’re operating in.
 
   - Application Deployment Context: The runtime environment and configuration that  app (e.g., Keycloak) runs with.
 
-  - Helm Release Context: Values and overrides you pass to Helm to customize deployment.
+  - Helm Release Context: Values and overrides we pass to Helm to customize deployment.
 =============
 
 🔹 2. Kubernetes Context in AKS
-  If you have multiple clusters, kubectl must know which AKS cluster to talk to.
+  If we have multiple clusters, kubectl must know which AKS cluster to talk to.
 Check  contexts:
     kubectl config get-contexts
 Switch context:
     kubectl config use-context <aks-cluster-name>
 
-If you don’t have the AKS context locally, fetch it:
+If we don’t have the AKS context locally, fetch it:
   az aks get-credentials -g <resource-group> -n <aks-cluster-name>
 =============
 
 🔹 3. Application Context for Keycloak in AKS
-  When you deploy Keycloak in AKS (via Helm chart or custom manifests), you define context through:
+  When we deploy Keycloak in AKS (via Helm chart or custom manifests), we define context through:
 
 ## Namespace
   >> kubectl create namespace keycloak
@@ -1722,7 +1722,7 @@ stringData:
   DB_USER: kcuser
   DB_PASSWORD: kcpassword
 ---
-# 🔐 TLS Secret (replace with your certs or use cert-manager)
+# 🔐 TLS Secret (replace with wer certs or use cert-manager)
 apiVersion: v1
 kind: Secret
 metadata:
@@ -2313,7 +2313,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/late
 kubectl get apiservices | grep metrics
 
 ### 2. Deployment with Resource Requests & Limits
--- HPA works only if you define CPU/memory requests/limits.
+-- HPA works only if we define CPU/memory requests/limits.
 >> sample Keycloak Deployment snippet:
 
 apiVersion: apps/v1
@@ -2426,7 +2426,7 @@ az snapshot create \
 
 d) Secrets
 
-Backup your Kubernetes secrets (DB password, TLS certs):
+Backup wer Kubernetes secrets (DB password, TLS certs):
 
 kubectl get secret pgsql-db-secret -o yaml > pgsql-db-secret-backup.yaml
 kubectl get secret keycloak-tls -o yaml > keycloak-tls-backup.yaml
@@ -2598,16 +2598,16 @@ Production (AKS) → PITR on Postgres + nightly pg_dump CronJob + PVC snapshots 
 
 Local (Docker) → pg_dump via Docker exec + keep compose files & certs in Git.
 
-👉 Do you want me to write a ready-to-use AKS CronJob + Docker script bundle so you can schedule backups in both environments with the same approach?
+👉 Do we want me to write a ready-to-use AKS CronJob + Docker script bundle so we can schedule backups in both environments with the same approach?
 
 ====================================================
 ### Azure Network Security Groups (NSG) are used with AKS (Azure Kubernetes Service).
 🔑 Key points first:
-  - NSGs in Azure are applied at the subnet or NIC level in your AKS cluster’s Virtual Network (VNet).
-  - AKS worker nodes (VMs) live inside a subnet. You can attach an NSG to that subnet to filter inbound/outbound traffic.
-  - Pods themselves do not directly get NSGs. Instead, you control Pod-level networking with Kubernetes NetworkPolicies.
+  - NSGs in Azure are applied at the subnet or NIC level in wer AKS cluster’s Virtual Network (VNet).
+  - AKS worker nodes (VMs) live inside a subnet. we can attach an NSG to that subnet to filter inbound/outbound traffic.
+  - Pods themselves do not directly get NSGs. Instead, we control Pod-level networking with Kubernetes NetworkPolicies.
   - example scenario:
-You want to allow only internal access to Keycloak in AKS, and block all external DB connections except port 5432 to PostgreSQL.
+we want to allow only internal access to Keycloak in AKS, and block all external DB connections except port 5432 to PostgreSQL.
 
 1. Create an NSG
 >> bash: 
@@ -2630,7 +2630,7 @@ az network nsg rule create \
   --destination-port-ranges 5432
 
 
-💡 Replace 10.240.0.0/16 with your AKS subnet range.
+💡 Replace 10.240.0.0/16 with wer AKS subnet range.
 
 3. Block everything else inbound (deny rule)
 az network nsg rule create \
@@ -2663,7 +2663,7 @@ az network vnet subnet update \
   --network-security-group aks-subnet-nsg
 
 ##   Result:
-  - Your AKS worker nodes will now only allow DB traffic on 5432.
+  - wer AKS worker nodes will now only allow DB traffic on 5432.
   - Use Kubernetes NetworkPolicies inside the cluster for pod-to-pod restrictions.
 -----------------
 🔹 Example: NetworkPolicy for Keycloak → PostgreSQL only
@@ -2700,7 +2700,7 @@ spec:
 ===================================================
 ## run AKS in Azure, the Network Security Groups (NSGs) apply at the subnet or node level, not directly to containers.
 
-🔹 1. Identify Your AKS Cluster Subnet
+🔹 1. Identify wer AKS Cluster Subnet
 # Get AKS cluster resource group
 az aks show -n <aks-cluster-name> -g <resource-group> --query nodeResourceGroup -o tsv
 
@@ -2716,18 +2716,18 @@ az network nic list --resource-group <aks-node-rg> --query "[].{name:name, nsg:n
 az network nsg rule list --nsg-name <nsg-name> --resource-group <rg> -o table
 ##
 🔹 4. Check Effective Rules on a Node NIC
-If you want to see what’s really applied (after defaults + custom rules):
+If we want to see what’s really applied (after defaults + custom rules):
 ## This is the best way to debug connectivity (e.g. why Keycloak pod cannot reach Postgres on 5432).
 
 >> bash:
   az network nic show-effective-nsg --name <nic-name> --resource-group <aks-node-rg> -o table
 ===============
-## check if your AKS cluster nodes can reach Postgres on port 5432.
+## check if wer AKS cluster nodes can reach Postgres on port 5432.
 🔹 1. Find an AKS Node NIC
 # Get the node resource group
 NODE_RG=$(az aks show -n <aks-cluster-name> -g <aks-rg> --query nodeResourceGroup -o tsv)
 
-# List NICs for your AKS nodes
+# List NICs for wer AKS nodes
 az network nic list -g $NODE_RG -o table
 1.2. Pick one NIC name from the list (e.g. aks-nodepool1-12345678-nic-0).
 🔹 2. Run IP Flow Verify to Check Port 5432
@@ -2754,7 +2754,7 @@ az network watcher test-ip-flow \
 
 ✅ Output will say either:
   "Allow" → traffic to Postgres is permitted
-  "Deny" → blocked by a specific NSG rule (you’ll see which one)
+  "Deny" → blocked by a specific NSG rule (we’ll see which one)
 ##  print all subnet IDs:
 az network vnet subnet list \
   --resource-group <rg-name> \
@@ -2763,8 +2763,8 @@ az network vnet subnet list \
 ------------------------
 ### 🔹 5. Things to Remember
   - Containers don’t get NSGs directly — they inherit from the node’s NIC/subnet NSG.
-  - If you’re using Azure CNI (not Kubenet), each pod gets an IP from the subnet → NSG applies.
-  - If your DB (Postgres) is external, make sure your egress NSG allows TCP 5432.
+  - If we’re using Azure CNI (not Kubenet), each pod gets an IP from the subnet → NSG applies.
+  - If wer DB (Postgres) is external, make sure wer egress NSG allows TCP 5432.
   - If Postgres is in another subnet/VNet, check VNet peering rules + NSG on that subnet.  
 ===================================================
 Architecture Diagram KAfka-LDAP-Keycloak-PGSQL
@@ -2879,7 +2879,7 @@ Keycloak configuration pointers (practical)
 
 KC_DB_URL: include SSL for Azure DB
 
-jdbc:postgresql://<your-db-host>:5432/keycloakdb?sslmode=require
+jdbc:postgresql://<wer-db-host>:5432/keycloakdb?sslmode=require
 
 
 KC_DB_USERNAME for Azure DB may be user@servername (ensure correct username format).
@@ -2890,7 +2890,7 @@ kcadm.sh automation: run as init job or use a startup wrapper script (pre-start 
 
 Kafka ↔ Keycloak authorization patterns
 
-Options (choose one per your architecture):
+Options (choose one per wer architecture):
 
 Service-side token validation — Kafka clients validate JWT from Keycloak; Keycloak issues tokens via client_credentials or password grants.
 
@@ -2904,7 +2904,7 @@ Provision VNet, subnets: aks-subnet, db-subnet, ldap-subnet.
 
 Create NSGs and attach to subnets; tight inbound/outbound rules.
 
-Deploy AKS with Azure CNI if you want pod IPs in VNet (useful for NSG granularity).
+Deploy AKS with Azure CNI if we want pod IPs in VNet (useful for NSG granularity).
 
 Deploy external Infinispan or configure KC_CACHE=kubernetes + stack.
 
@@ -2949,13 +2949,13 @@ Monitor Keycloak and Infinispan metrics; add liveness/readiness probes and HPA i
 Keep secrets in Azure Key Vault and sync with Kubernetes via CSI driver for production.
 
 ## Possible options:
-  - generate a one-file diagram (SVG/PNG) (I can provide the layout and steps 
-  - produce Helm values + Kubernetes manifest snippets tailored to your real hostnames/IPs and AD paths, or
+  - generate a one-file diagram (SVG/PNG) (I can provide the lawet and steps 
+  - produce Helm values + Kubernetes manifest snippets tailored to wer real hostnames/IPs and AD paths, or
   - output a policy-as-code / Terraform snippet to wire VNet + NSG + AKS + Private Endpoint.
 
 ===================================================
 5) Decode JWT in Postman (quick)
-  You can decode the access token in Postman Tests tab with a small script to show payload:
+  we can decode the access token in Postman Tests tab with a small script to show payload:
 
 // Paste this in the Tests tab after receiving a token response
 const body = pm.response.json();
@@ -3023,15 +3023,15 @@ Remove Authentication Direct Grand Flow:
  - Login to the Keycloak Admin Console.
  - Navigate to:
     Authentication → Flows
- - Check if the flow you want to delete is set as the default binding:
+ - Check if the flow we want to delete is set as the default binding:
  - Go to Authentication → Bindings.
  - Look at Direct Grant Flow, Browser Flow, etc.
- - If your custom flow is selected there, change it back to the built-in direct grant (or another valid flow).
+ - If wer custom flow is selected there, change it back to the built-in direct grant (or another valid flow).
  - Also check if any client is explicitly using that flow:
-  - Go to Clients → <your client> → Authentication Flow Overrides.
-  - Ensure your flow is not set there. If it is, unset or change it.
+  - Go to Clients → <wer client> → Authentication Flow Overrides.
+  - Ensure wer flow is not set there. If it is, unset or change it.
   - Once the flow is not referenced anywhere, go back to
-Authentication → Flows, select your flow, and click Delete.
+Authentication → Flows, select wer flow, and click Delete.
 ## #############
 ## 🛠 CLI (kcadm.sh) method
   
@@ -3045,12 +3045,12 @@ kcadm.sh get authentication/flows -r <realm>
 # If flow is bound, reset binding first
 kcadm.sh update realms/<realm> -s "directGrantFlow=direct grant"
 
-# Delete your custom flow by id or alias
+# Delete wer custom flow by id or alias
 kcadm.sh delete authentication/flows/<flow-id> -r <realm>
 ===========
 
 ✅ Rule of thumb:
-  You can’t delete an authentication flow if:
+  we can’t delete an authentication flow if:
   It is the default binding for Browser/Direct Grant/Reset Credentials.
   It is set on a client override.
   Once detached, deletion works.
@@ -3137,7 +3137,7 @@ helm upgrade --install keycloak-load ./mychart -f values.yaml
 ## >> This will schedule a job every 2 minutes that hits Keycloak with requests load in concurrent batches.
 
 ## 2 Option Use kubectl run with a loop of curl
->>   This will continuously hit Keycloak until you stop it (Ctrl+C).
+>>   This will continuously hit Keycloak until we stop it (Ctrl+C).
 >> 
 kubectl run keycloak-load --rm -it --image=busybox --restart=Never -- \
   sh -c "while true; do 
@@ -3149,7 +3149,7 @@ kubectl run keycloak-load --rm -it --image=busybox --restart=Never -- \
 ## 2. option
 5. 🧩 Kubernetes-native stress with stress-ng
    run stress-ng inside a pod targeting CPU:
-   This doesn’t hit Keycloak directly, but if you run it inside the Keycloak pod (e.g., kubectl exec) it will spike CPU artificially so HPA triggers scaling.
+   This doesn’t hit Keycloak directly, but if we run it inside the Keycloak pod (e.g., kubectl exec) it will spike CPU artificially so HPA triggers scaling.
 
 >> 
 kubectl run stress --rm -it --image=alpine/stress-ng -- \
@@ -3166,15 +3166,15 @@ Direct Access Grant Authorization in Keycloak
   password=secret
 -------------------------
 🔐 Direct Access Grant with Certificate (Mutual TLS)
- -  If you want to use client certificates for authentication (mTLS), 
+ -  If we want to use client certificates for authentication (mTLS), 
     Keycloak supports this via Client Authentication → X.509 certificates.
 - This lets Keycloak validate the client identity using the presented certificate instead of a shared secret.
 
 🧩 Steps to Create Direct Access Grant Client with Certificate via Bash
     Below is a pure bash script using kcadm.sh (Keycloak’s admin CLI).
 🧱 Requirements:
-  - You must be logged in to the admin CLI (kcadm.sh config credentials ...)
-  - You already have your .crt and .key files ready for the client
+  - we must be logged in to the admin CLI (kcadm.sh config credentials ...)
+  - we already have wer .crt and .key files ready for the client
 
 
 ## Step 1: Create the client
@@ -3192,7 +3192,7 @@ CLIENT_ID="my-direct-client"
 
 # 2. Step 2: Enable Certificate-based Authentication (mTLS)
   Keycloak expects the client certificate to be uploaded as an attribute or credential.
-  You can link a certificate by setting the client’s X.509 attribute:
+  we can link a certificate by setting the client’s X.509 attribute:
 >> bash:
 CLIENT_UUID=$(/opt/keycloak/bin/kcadm.sh get clients -r "$REALM" --query clientId=$CLIENT_ID --fields id --format csv | head -1 | cut -d',' -f1)
 
@@ -3352,7 +3352,7 @@ No jq or awk dependencies — only sed, grep, and standard bash tools.
 ## FIx null when creting execution :
 null [No authentication provider  found for id: x509-username ]
 ## Option 1 — Add environment variable (recommended)
-# In your Docker or Helm values:
+# In wer Docker or Helm values:
 env:
   - name: KC_FEATURES
     value: "x509-auth"
@@ -3458,7 +3458,7 @@ echo "✅ Realm '${REALM_NAME}' ID: ${REALM_ID}"
 HARSHICORP VAULT use admin creds in kubernetes to start Docker container:
 Vault path is secret/data/keycloak-admin and it contains:
   vault kv put secret/keycloak-admin username=admin password=SuperSecret123
-You can fetch secrets using the Vault CLI or Agent and create a Kubernetes Secret dynamically.
+we can fetch secrets using the Vault CLI or Agent and create a Kubernetes Secret dynamically.
 ## Option A: Simple manual (for test/dev)
 # Fetch values from Vault
 USERNAME=$(vault kv get -field=username secret/keycloak-admin)
@@ -3470,7 +3470,7 @@ kubectl create secret generic keycloak-admin-creds \
   --from-literal=password=$PASSWORD
 --------------
 Option B: Auto-inject via Vault Agent Injector (recommended)
-  Annotate your Keycloak Deployment so Vault auto-injects the credentials file:
+  Annotate wer Keycloak Deployment so Vault auto-injects the credentials file:
 >> yaml:
 apiVersion: apps/v1
 kind: Deployment
@@ -3561,15 +3561,15 @@ vault.hashicorp.com/agent-inject-template-ldap: |
   }
   {{- end }}          
 ## ====
-👉 This will auto-generate a file like /vault/secrets/ldap in your pod.
-  Then, in your bash script, just read from that file:
+👉 This will auto-generate a file like /vault/secrets/ldap in wer pod.
+  Then, in wer bash script, just read from that file:
 >> bash
 LDAP_CREDENTIAL=$(grep -oP '(?<="bindCredential": \[")[^"]+' /vault/secrets/ldap)
 
 ===========================================================================
 Rotate admin password:
 ✅ Option A: Change password using kcadm.sh
-    If you’re logged in as admin (or using a valid config):
+    If we’re logged in as admin (or using a valid config):
 >>
 /opt/keycloak/bin/kcadm.sh update users/<admin_user_id> \
     -r master \
@@ -3577,7 +3577,7 @@ Rotate admin password:
     --config /tmp/kcadm.config
 
 ✅ Option B: Reset password from inside the Pod
-    If your admin password is injected from env vars (e.g., Kubernetes Secret), rotate it like this:
+    If wer admin password is injected from env vars (e.g., Kubernetes Secret), rotate it like this:
 >>
   kubectl get secret keycloak-admin-creds -o yaml
   # edit the secret (base64 encode the new password)
@@ -3587,7 +3587,7 @@ Rotate admin password:
 ---
 🧩 2. Use a Token Instead of Password with kcadm.sh
 
-You can authenticate with a Bearer token instead of a username/password combo.
+we can authenticate with a Bearer token instead of a username/password combo.
 
 ✅ Step 1: Get a token
 TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-connect/token" \
@@ -3602,7 +3602,7 @@ TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/openid-con
   --client admin-cli \
   --token "$TOKEN"
 
-This will write the token to your /tmp/kcadm.config, and subsequent commands will use it automatically:
+This will write the token to wer /tmp/kcadm.config, and subsequent commands will use it automatically:
 
 /opt/keycloak/bin/kcadm.sh get realms --config /tmp/kcadm.config
 
@@ -3611,6 +3611,135 @@ This will write the token to your /tmp/kcadm.config, and subsequent commands wil
   can wrap this logic in a bash script like using:
   >>
     config/rotate-admin.sh:
+=========================================================================
+## Run KCADM remotelly or from local
+Run kcadm.sh from wer local machine
+✅ Steps
+1. Expose Keycloak Admin API
+  - If Keycloak is deployed in AKS and currently only available inside the cluster (ClusterIP service), we must make it accessible externally.
+  - we can use one of the following:
+# Option 1 — Ingress (Recommended)
+If we have an ingress controller (like NGINX Ingress):
+>> YAML:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  rules:
+    - host: keycloak.<your-domain>.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+-------------------------------------                  
+# Option 2 — Port-forward (temporary)
+>> bash:
+  kubectl port-forward svc/keycloak 8080:8080 -n keycloak
+ # Then in another terminal:
+  /opt/keycloak/bin/kcadm.sh config credentials \
+    --server http://localhost:8080 \
+    --realm master \
+    --user admin \
+    --password <admin-password> 
+
+2. Set up Admin Config
+  We can store connection info in a config file (e.g., ~/.keycloak/kcadm.config):
+ /opt/keycloak/bin/kcadm.sh config credentials \
+  --server https://keycloak.<your-domain>.com \
+  --realm master \
+  --user admin \
+  --password '<admin-password>' \
+  --config ~/.keycloak/kcadm.config
+
+3. Run Commands Remotely:
+>> /opt/keycloak/bin/kcadm.sh get realms -r master --config ~/.keycloak/kcadm.config
+------------------------
+# 3. Option B — Run kcadm.sh from another container/pod inside the same AKS cluster
+  This is more secure and scalable.
+  ✅ Steps
+1. Deploy an admin utility pod
+  We can run a keycloak-tools pod with kcadm.sh preinstalled:
+>> YAML:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: keycloak-admin-cli
+    namespace: keycloak
+  spec:
+    containers:
+      - name: kcadm
+        image: quay.io/keycloak/keycloak:24.0.1
+        command: ["/bin/bash", "-c", "sleep infinity"]
+# Then connect to it:
+  kubectl exec -it keycloak-admin-cli -n keycloak -- bash
+
+2. Authenticate using internal service name
+  In AKS, internal DNS for the Keycloak service works like:
+  >> http://keycloak.keycloak.svc.cluster.local:8080
+
+Then inside the pod:
+  /opt/keycloak/bin/kcadm.sh config credentials \
+    --server http://keycloak.keycloak.svc.cluster.local:8080 \
+    --realm master \
+    --user admin \
+    --password <admin-password> \
+    --config /tmp/kcadm.config
+
+3. Run any kcadm.sh command
+  For example:
+  /opt/keycloak/bin/kcadm.sh get users -r master --config /tmp/kcadm.config
+
+4. We need also mount this script into the pod:
+>>
+kubectl cp ./kcadmin.sh keycloak-admin-cli:/opt/scripts/kcadmin.sh -n keycloak
+kubectl exec -it keycloak-admin-cli -n keycloak -- bash /opt/scripts/kcadmin.sh
+----------------------------------
+# 4. Option C — Use a Kubernetes Job or CronJob
+If you want to automate Keycloak setup (create realms, roles, clients, etc.), you can create a Kubernetes Job:
+>> YAML:
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-setup
+  namespace: keycloak
+spec:
+  template:
+    spec:
+      containers:
+        - name: kcadm
+          image: quay.io/keycloak/keycloak:24.0.1
+          command: ["/bin/bash", "-c", "/opt/keycloak/bin/kcadm.sh config credentials ... && /scripts/setup.sh"]
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      restartPolicy: Never
+      volumes:
+        - name: scripts
+          configMap:
+            name: keycloak-setup-scripts
+-----------------------------------------
+# 5. Security Tip — Store admin credentials in Kubernetes Secret
+>> 
+kubectl create secret generic keycloak-admin-secret \
+  -n keycloak \
+  --from-literal=KEYCLOAK_USER=admin \
+  --from-literal=KEYCLOAK_PASSWORD='your-secure-password'
+-----------------------------------------
+✅ Summary
+| Where to Run                 | How to Access Keycloak      | Command Example |
+| ---------------------------- | --------------------------- | --------------- |
+| **Local machine**            | via ingress or port-forward | `kcadm.sh --server                                       https://keycloak.example.com ...`|
+| **Inside cluster pod**       | via internal service DNS    | `kcadm.sh --server                               http://keycloak.keycloak.svc.cluster.                                                         local:8080 ...` |
+| **Automation (Job/CronJob)** | within AKS                  | Job YAML running                                                       `kcadm.sh`commands |
+
+
 
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...

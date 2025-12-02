@@ -306,7 +306,7 @@ echo "username= "$username
 # save test start time
 DATE=`date`
 echo $test_name = "test_started->'$DATE'" > $working_dir/test_$username
-aws s3 cp $working_dir/test_$username s3://ew-uai3031357-config-qa/testpft/test_$username --sse-kms-key-id arn:aws:kms:us-east-1:487459321624:key/435837b1-af36-4eab-b10c-31279d4de750 --sse aws:kms --acl bucket-owner-full-control  --no-verify-ssl 
+aws s3 cp $working_dir/test_$username s3://ew-test-config-qa/testpft/test_$username --sse-kms-key-id arn:aws:kms:us-east-1:test:key/testb1-af36-4eab-b10c-test--sse aws:kms --acl bucket-owner-full-control  --no-verify-ssl 
 #
 
 master_pod=`kubectl get pod -n pft | grep 'jmeter-server-'$username | awk '{print $1}'`

@@ -3811,6 +3811,10 @@ if echo "$POLICY_RESPONSE" | grep -q "\"name\":\"$NAME_TO_MATCH\""; then
 fi
 
 echo "$POLICY_ID"
+## Alternative:
+POLICY_ID=$(echo "$POLICY_RESPONSE" \
+  | tr -d '\n ' \
+  | sed -n 's/.*"id":"\([^"]*\)".*"name":"'"$NAME_TO_MATCH"'".*/\1/p')
 
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...

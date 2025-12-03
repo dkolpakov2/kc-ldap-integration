@@ -2,22 +2,29 @@
 set -e
 
 ### -----------------------------
-### CONFIGURATION (EDIT THESE)
+### CONFIGURATION
 ### -----------------------------
 KC_URL="https://keycloak-001-dns.com"
 KC_REALM="master"
-KC_USER="admin-dk"
-KC_PASS="Adm1nu\$er"    # escape $ in bash
+KC_USER="admin"
+KC_PASS="Adminu\$er"   # escape $ in bash
 CLIENT_ID="your-client-id"
 
-# Authorization details
+# Resource and scopes
 RESOURCE_NAME="topic:test-payment"
-POLICY_NAME="test-payment-wo-policy"
-PERMISSION_NAME="test-payment:wo-permission"
+SCOPES=("Write" "Read" "Describe")
+
+# Policies
+POLICY_WO="test-payment-wo-policy"
+POLICY_RO="test-payment-ro-policy"
+
+# Permissions
+PERMISSION_WO="topic:test-payment:wo-permission"
+PERMISSION_RO="topic:test-payment:ro-permission"
 ### -----------------------------
 
 
-echo "=== 1. Getting admin token ==="
+echo "=== 1. Obtaining access token ==="
 TOKEN_RESPONSE=$(curl -s -X POST "$KC_URL/realms/$KC_REALM/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=$KC_USER" \
@@ -28,81 +35,108 @@ TOKEN_RESPONSE=$(curl -s -X POST "$KC_URL/realms/$KC_REALM/protocol/openid-conne
 ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 
 if [ -z "$ACCESS_TOKEN" ]; then
-  echo "ERROR: Failed to obtain token"
+  echo "ERROR: Failed to get token"
   exit 1
 fi
 
-echo "Token obtained OK"
 
-
-echo "=== 2. Getting client UUID for clientId=$CLIENT_ID ==="
+echo "=== 2. Get client UUID ==="
 CLIENT_LOOKUP=$(curl -s -X GET "$KC_URL/admin/realms/$KC_REALM/clients?clientId=$CLIENT_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN")
 
 CLIENT_UUID=$(echo "$CLIENT_LOOKUP" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 if [ -z "$CLIENT_UUID" ]; then
-  echo "ERROR: Client not found!"
+  echo "ERROR: Client not found"
   exit 1
 fi
 
-echo "Client UUID = $CLIENT_UUID"
 
+echo "=== 3. Create resource type=scope with scopes ==="
+# Build scopes JSON manually
+SCOPES_JSON=""
+for S in "${SCOPES[@]}"; do
+  SCOPES_JSON="$SCOPES_JSON\"$S\","
+done
+SCOPES_JSON="[${SCOPES_JSON%,}]"
 
-echo "=== 3. Creating resource: $RESOURCE_NAME ==="
-RESOURCE_RESPONSE=$(curl -s -X POST "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/resource" \
+RESOURCE_RESPONSE=$(curl -s -X POST \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/resource" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
     \"name\": \"$RESOURCE_NAME\",
-    \"type\": \"topic\",
+    \"type\": \"scope\",
     \"ownerManagedAccess\": false,
+    \"scopes\": $SCOPES_JSON,
     \"uris\": [\"$RESOURCE_NAME\"]
   }")
 
 RESOURCE_ID=$(echo "$RESOURCE_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 if [ -z "$RESOURCE_ID" ]; then
-  echo "ERROR: Could not create resource"
+  echo "ERROR: Resource creation failed"
   exit 1
 fi
 
-echo "Resource created with ID = $RESOURCE_ID"
 
-
-echo "=== 4. Creating policy: $POLICY_NAME ==="
-POLICY_RESPONSE=$(curl -s -X POST "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
+echo "=== 4. Create WO policy ==="
+POLICY_WO_RESPONSE=$(curl -s -X POST \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"$POLICY_NAME\",
-    \"roles\": [{
-      \"id\": \"realm-admin\",
-      \"required\": false
-    }]
+     \"name\": \"$POLICY_WO\",
+     \"roles\": [{
+       \"id\": \"realm-admin\",
+       \"required\": false
+     }]
   }")
 
-POLICY_ID=$(echo "$POLICY_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
-
-if [ -z "$POLICY_ID" ]; then
-  echo "ERROR: Could not create policy"
-  exit 1
-fi
-
-echo "Policy created with ID = $POLICY_ID"
+POLICY_WO_ID=$(echo "$POLICY_WO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 
-echo "=== 5. Creating permission: $PERMISSION_NAME ==="
-PERMISSION_RESPONSE=$(curl -s -X POST "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
+echo "=== 5. Create RO policy ==="
+POLICY_RO_RESPONSE=$(curl -s -X POST \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"$PERMISSION_NAME\",
+     \"name\": \"$POLICY_RO\",
+     \"roles\": [{
+       \"id\": \"realm-admin\",
+       \"required\": false
+     }]
+  }")
+
+POLICY_RO_ID=$(echo "$POLICY_RO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p")
+
+
+echo "=== 6. Create WO permission and assign resource ==="
+curl -s -X POST \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"$PERMISSION_WO\",
     \"resources\": [\"$RESOURCE_ID\"],
-    \"policies\": [\"$POLICY_ID\"]
-  }")
+    \"policies\": [\"$POLICY_WO_ID\"]
+  }" >/dev/null
 
-echo "Permission created:"
-echo "$PERMISSION_RESPONSE"
+
+echo "=== 7. Create RO permission and assign resource ==="
+curl -s -X POST \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"$PERMISSION_RO\",
+    \"resources\": [\"$RESOURCE_ID\"],
+    \"policies\": [\"$POLICY_RO_ID\"]
+  }" >/dev/null
+
 
 echo "=== DONE ==="
+echo "Resource ID = $RESOURCE_ID"
+echo "WO Permission = $PERMISSION_WO"
+echo "RO Permission = $PERMISSION_RO"

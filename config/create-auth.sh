@@ -66,3 +66,43 @@ if [ -z "$RESOURCE_ID" ]; then
   echo "ERROR: Could not create resource"
   exit 1
 fi
+
+echo "Resource created with ID = $RESOURCE_ID"
+
+
+echo "=== 4. Creating policy: $POLICY_NAME ==="
+POLICY_RESPONSE=$(curl -s -X POST "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"$POLICY_NAME\",
+    \"roles\": [{
+      \"id\": \"realm-admin\",
+      \"required\": false
+    }]
+  }")
+
+POLICY_ID=$(echo "$POLICY_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+
+if [ -z "$POLICY_ID" ]; then
+  echo "ERROR: Could not create policy"
+  exit 1
+fi
+
+echo "Policy created with ID = $POLICY_ID"
+
+
+echo "=== 5. Creating permission: $PERMISSION_NAME ==="
+PERMISSION_RESPONSE=$(curl -s -X POST "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"$PERMISSION_NAME\",
+    \"resources\": [\"$RESOURCE_ID\"],
+    \"policies\": [\"$POLICY_ID\"]
+  }")
+
+echo "Permission created:"
+echo "$PERMISSION_RESPONSE"
+
+echo "=== DONE ==="

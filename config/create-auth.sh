@@ -81,17 +81,50 @@ fi
 
 
 echo "=== 4. Create WO policy ==="
+# Look up group ID for group "DEV_test-ACH"
+GROUP_LOOKUP=$(curl -s -X GET \
+  "$KC_URL/admin/realms/$KC_REALM/groups?search=DEV_test-ACH" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")
+
+GROUP_ID=$(echo "$GROUP_LOOKUP" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+
+if [ -z "$GROUP_ID" ]; then
+  echo "ERROR: Group DEV_test-ACH not found"
+  exit 1
+fi
+
 POLICY_WO_RESPONSE=$(curl -s -X POST \
-  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/group" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
      \"name\": \"$POLICY_WO\",
-     \"roles\": [{
-       \"id\": \"realm-admin\",
-       \"required\": false
+     \"groups\": [{
+        \"id\": \"$GROUP_ID\",
+        \"path\": \"/DEV_test-ACH\",
+        \"extendChildren\": false
      }]
   }")
+
+POLICY_WO_ID=$(echo "$POLICY_WO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+
+if [ -z "$POLICY_WO_ID\" ]; then
+  echo \"ERROR: Group policy creation failed\"
+  exit 1
+fi
+
+## THis is Role BAsed  NO GROUP Policy
+# POLICY_WO_RESPONSE=$(curl -s -X POST \
+#   "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/policy/role" \
+#   -H "Authorization: Bearer $ACCESS_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d "{
+#      \"name\": \"$POLICY_WO\",
+#      \"roles\": [{
+#        \"id\": \"realm-admin\",
+#        \"required\": false
+#      }]
+#   }")
 
 POLICY_WO_ID=$(echo "$POLICY_WO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
@@ -109,10 +142,12 @@ POLICY_RO_RESPONSE=$(curl -s -X POST \
      }]
   }")
 
-POLICY_RO_ID=$(echo "$POLICY_RO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p")
+POLICY_RO_ID=$(echo "$POLICY_RO_RESPONSE" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 
 echo "=== 6. Create WO permission and assign resource ==="
+echo "=== 6. Create WO permission and assign resource + group policy ==="
+
 curl -s -X POST \
   "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -122,6 +157,17 @@ curl -s -X POST \
     \"resources\": [\"$RESOURCE_ID\"],
     \"policies\": [\"$POLICY_WO_ID\"]
   }" >/dev/null
+
+# Replaced with new Group Poliy
+# curl -s -X POST \
+#   "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/authz/resource-server/permission/resource" \
+#   -H "Authorization: Bearer $ACCESS_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d "{
+#     \"name\": \"$PERMISSION_WO\",
+#     \"resources\": [\"$RESOURCE_ID\"],
+#     \"policies\": [\"$POLICY_WO_ID\"]
+#   }" >/dev/null
 
 
 echo "=== 7. Create RO permission and assign resource ==="

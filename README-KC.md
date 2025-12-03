@@ -99,6 +99,7 @@ Postman load test:
     username={{ldap_user}}
     password={{ldap_password}}
 
+
 3. Postman Collection Example (JSON Export)
 {
   "info": {
@@ -3798,6 +3799,18 @@ echo "✅ Credentials valid"
 >>
 curl -s "$KEYCLOAK_URL/admin/realms/master/users?username=$ADMIN_USER"
 
+==========================================================================
+## Exstract id by name from JSON:
+{"id":"12345","name":"dev-test","type":"group","logic":"POSITIVE","descriptionStrategy":"UNANIMOUS","groups":[{"id":"3245678","extedChildren":false}]]}
+
+NAME_TO_MATCH="dev-test"
+
+if echo "$POLICY_RESPONSE" | grep -q "\"name\":\"$NAME_TO_MATCH\""; then
+    POLICY_ID=$(echo "$POLICY_RESPONSE" \
+        | sed -n 's/.*"id":"\([^"]*\)".*"name":"'"$NAME_TO_MATCH"'".*/\1/p')
+fi
+
+echo "$POLICY_ID"
 
 =========================================================================
 I get null [execution parent flow does nor exist] when using ADD_OUT=$($KCADM create authentication/executions \ -r "$REALM" \ -s "authenticator=$ACTION" \ -s "parentFlow=$FLOW_ALIAS" \ -s "requirement=ALTERNATIVE" 2>&1 || true) but flow exists and it prints it in json when I send get request kcadm.sh get authentication/flows ...

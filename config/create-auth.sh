@@ -109,6 +109,15 @@ POLICY_WO_RESPONSE=$(curl -s -X POST \
 POLICY_RESPONSE='{"id":"12345","name":"dev-test","type":"group","logic":"POSITIVE","descriptionStrategy":"UNANIMOUS","groups":[{"id":"3245678","extedChildren":false}]}'
 NAME_TO_MATCH="dev-test"
 
+POLICY_ID=$(echo "$POLICY_RESPONSE" \
+  | sed -n 's/.*"id":"\([^"]*\)".*"name":"dev-test".*/\1/p')
+
+if [ -z "$POLICY_ID" ]; then
+  POLICY_ID=$(echo "$POLICY_RESPONSE" \
+      | sed -n 's/.*"name":"dev-test".*"id":"\([^"]*\)".*/\1/p')
+fi
+
+
 POLICY_ID=""
 
 # Check name exists

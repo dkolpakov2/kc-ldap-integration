@@ -109,6 +109,12 @@ POLICY_WO_RESPONSE=$(curl -s -X POST \
 POLICY_RESPONSE='{"id":"12345","name":"dev-test","type":"group","logic":"POSITIVE","descriptionStrategy":"UNANIMOUS","groups":[{"id":"3245678","extedChildren":false}]}'
 NAME_TO_MATCH="dev-test"
 
+POLICY_ID=$(echo "$JSON" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p; q')
+POLICY_ID=$(echo "$JSON" \
+  | sed 's/"id":"/\n"id":"'/g \
+  | grep -m1 '"id":"' \
+  | sed 's/.*"id":"\([^"]*\)".*/\1/')
+
 POLICY_ID=$(echo "$POLICY_RESPONSE" \
   | sed -n 's/.*"id":"\([^"]*\)".*"name":"dev-test".*/\1/p')
 

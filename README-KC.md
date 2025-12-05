@@ -3379,11 +3379,23 @@ ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--hostname-strict=false", "--fe
 
 
 {
+  "id": "myid",
+  "name": "Username",
+  "description": "description",
+  "type":"group",
+  "logic":"POSITIVE",
+  "group":[{"id":"123456789"}]
+}
+
+{
+ {
   "id": "x509-username",
   "displayName": "X509/Validate Username",
   "description": "Validates users based on the X509 client certificate."
+} "id": "x509-username",
+  "displayName": "X509/Validate Username",
+  "description": "Validates users based on the X509 client certificate."
 }
-
 [ {
   "id": "12345",
   "requirement":"DISABLED",
